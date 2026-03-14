@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+    --color-primary: #4caf50;
+    --color-primary-hover: #43a047;
+    --color-background: #ffffff;
+    --color-background-dark: #111827;
+    --color-card-bg: #f9fafb;
+    --color-card-border: #e5e7eb;
+    --color-card-border-dark: #374151;
+
+    --radius-xl: 12px;
+    --radius-2xl: 16px;
+}
+
+:root {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    color: #1f2937;
+    background-color: var(--color-background);
+}
+
+.dark {
+    color: #f9fafb;
+    background-color: var(--color-background-dark);
+}
+
+body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+    color: #111827;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+}
+
+.dark h1,
+.dark h2,
+.dark h3 {
+    color: #ffffff;
+}
