@@ -20,6 +20,7 @@ import { Toaster } from 'sonner';
 
 import InventoryView from './modules/inventory/InventoryView';
 import LoginForm from './components/LoginForm';
+import LandingPage from './components/LandingPage';
 import { useAuthStore } from './hooks/useAuth';
 import SupplierView from './modules/suppliers/SupplierView';
 import ClientView from './modules/clients/ClientView';
@@ -89,6 +90,7 @@ export default function App() {
     const [activeModule, setActiveModule] = useState<ModuleId>('menu');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const [showLanding, setShowLanding] = useState(true);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -97,6 +99,13 @@ export default function App() {
     }, [isAuthenticated]);
 
     if (!isAuthenticated) {
+        if (showLanding) {
+            return (
+                <div className={isDarkMode ? 'dark' : ''}>
+                    <LandingPage onLoginClick={() => setShowLanding(false)} />
+                </div>
+            )
+        }
         return (
             <CurrencyProvider>
                 <div className={isDarkMode ? 'dark' : ''}>
