@@ -415,8 +415,6 @@ export default function ServicesView() {
                         <td class="text-center">-</td>
                         <td>-</td>
                         <td class="text-center">0</td>
-                        <td class="text-center">${ev.cost_center || 'N/A'}</td>
-                        <td class="text-center"><span class="status-badge status-${ev.status.toLowerCase()}">${ev.status}</span></td>
                         <td><span class="no-items">Sin detalles</span></td>
                     </tr>
                 `);
@@ -437,8 +435,6 @@ export default function ServicesView() {
                             <td class="text-center">${dateStr}<br>${timeStr}</td>
                             <td>${d.location || 'N/A'}</td>
                             <td class="text-center">${d.attendees || 0}</td>
-                            <td class="text-center">${ev.cost_center || 'N/A'}</td>
-                            <td class="text-center"><span class="status-badge status-${ev.status.toLowerCase()}">${ev.status}</span></td>
                             <td class="menu-cell">${itemsText}</td>
                         </tr>
                     `);
@@ -526,20 +522,6 @@ export default function ServicesView() {
                             word-break: break-word;
                             max-width: 320px;
                         }
-                        .status-badge {
-                            font-size: 8px;
-                            font-weight: 900;
-                            text-transform: uppercase;
-                            padding: 1px 4px;
-                            border-radius: 4px;
-                            border: 1px solid transparent;
-                            display: inline-block;
-                        }
-                        .status-abierta { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-                        .status-pendiente { background-color: #fffbeb; color: #b45309; border-color: #fde68a; }
-                        .status-confirmado { background-color: #ecfdf5; color: #047857; border-color: #a7f3d0; }
-                        .status-cancelado { background-color: #fef2f2; color: #b91c1c; border-color: #fecaca; }
-                        .status-cerrada { background-color: #f3f4f6; color: #374151; border-color: #e5e7eb; }
                         
                         @media print {
                             body {
@@ -570,13 +552,11 @@ export default function ServicesView() {
                         <thead>
                             <tr>
                                 <th style="width: 6%; text-align: center;">Reg.</th>
-                                <th style="width: 20%;">Servicio / Responsable</th>
+                                <th style="width: 25%;">Servicio / Responsable</th>
                                 <th style="width: 12%; text-align: center;">Fecha y Hora</th>
-                                <th style="width: 14%;">Ubicación / Lugar</th>
-                                <th style="width: 5%; text-align: center;">PAX</th>
-                                <th style="width: 10%; text-align: center;">Centro Costo</th>
-                                <th style="width: 8%; text-align: center;">Estado</th>
-                                <th style="width: 25%;">Menú Solicitado</th>
+                                <th style="width: 18%;">Ubicación / Lugar</th>
+                                <th style="width: 6%; text-align: center;">PAX</th>
+                                <th style="width: 33%;">Menú Solicitado</th>
                             </tr>
                         </thead>
                         <tbody>
