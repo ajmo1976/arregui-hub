@@ -32,6 +32,16 @@ import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 import ServiceDetailView from './ServiceDetailView';
 
+// Helper to parse date string neutrally into a local midnight Date object
+const parseNeutralDate = (dateStr: string) => {
+    if (!dateStr) return new Date();
+    const datePart = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
+    const parts = datePart.split('-');
+    if (parts.length !== 3) return new Date(dateStr);
+    const [year, month, day] = parts.map(Number);
+    return new Date(year, month - 1, day);
+};
+
 // Helper to convert time string (e.g. "3:00 p.m.") to minutes from midnight
 const parseTimeToMinutes = (timeStr: string = "") => {
     if (!timeStr) return 0;
@@ -71,7 +81,7 @@ export default function ServicesCalendar() {
             const start = startOfWeek(currentDate, { locale: es });
             const end = endOfWeek(currentDate, { locale: es });
             const weekEvents = events.filter(ev => {
-                const d = parseISO(ev.service_date);
+                const d = parseNeutralDate(ev.service_date);
                 return d >= start && d <= end;
             });
 
@@ -252,7 +262,7 @@ export default function ServicesCalendar() {
                     <div className="w-20 border-r border-gray-100 dark:border-gray-800" />
                     <div className="flex-1 grid grid-cols-7 font-inter uppercase">
                         {days.map((day, i) => {
-                            const dayEvents = events.filter(ev => isSameDay(parseISO(ev.service_date), day));
+                            const dayEvents = events.filter(ev => isSameDay(parseNeutralDate(ev.service_date), day));
                             return (
                                 <div key={i} className={`py-4 px-1 text-center border-r last:border-r-0 border-gray-100 dark:border-gray-800 ${isSameDay(day, new Date()) ? 'bg-primary/5' : ''}`}>
                                     <p className="text-[10px] font-black text-gray-400 tracking-widest leading-none">{format(day, 'eee', { locale: es })}</p>
@@ -320,7 +330,7 @@ export default function ServicesCalendar() {
                                 {/* Events for this day */}
                                 {(() => {
                                     const dayEvents = events
-                                        .filter(ev => isSameDay(parseISO(ev.service_date), day))
+                                        .filter(ev => isSameDay(parseNeutralDate(ev.service_date), day))
                                         .sort((a, b) => parseTimeToMinutes(a.service_time) - parseTimeToMinutes(b.service_time));
 
                                     if (dayEvents.length === 0) return null;
@@ -412,7 +422,7 @@ export default function ServicesCalendar() {
     };
 
     const renderDayCells = () => {
-        const dayEvents = events.filter(ev => isSameDay(parseISO(ev.service_date), currentDate));
+        const dayEvents = events.filter(ev => isSameDay(parseNeutralDate(ev.service_date), currentDate));
 
         return (
             <div className="flex flex-col border border-gray-100 dark:border-gray-800 rounded-3xl overflow-hidden bg-white dark:bg-gray-950 shadow-2xl min-h-[600px]">
@@ -496,8 +506,8 @@ export default function ServicesCalendar() {
     const renderAgenda = () => {
         // Sort events by date and time
         const sortedEvents = [...events].sort((a, b) => {
-            const dateA = new Date(a.service_date);
-            const dateB = new Date(b.service_date);
+            const dateA = parseNeutralDate(a.service_date);
+            const dateB = parseNeutralDate(b.service_date);
             if (dateA.getTime() !== dateB.getTime()) return dateA.getTime() - dateB.getTime();
             return a.service_time.localeCompare(b.service_time);
         });
@@ -505,7 +515,7 @@ export default function ServicesCalendar() {
         // Group by day
         const grouped: { [key: string]: any[] } = {};
         sortedEvents.forEach(ev => {
-            const dateKey = format(parseISO(ev.service_date), 'yyyy-MM-dd');
+            const dateKey = format(parseNeutralDate(ev.service_date), 'yyyy-MM-dd');
             if (!grouped[dateKey]) grouped[dateKey] = [];
             grouped[dateKey].push(ev);
         });
@@ -516,8 +526,8 @@ export default function ServicesCalendar() {
                     <div key={dateKey} className="bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-xl overflow-hidden p-6">
                         <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-50 dark:border-gray-800">
                             <div className="w-14 h-14 bg-primary text-white rounded-2xl flex flex-col items-center justify-center shadow-lg">
-                                <span className="text-xl font-black leading-none">{format(parseISO(dateKey), 'd')}</span>
-                                <span className="text-[9px] font-black uppercase tracking-widest opacity-80">{format(parseISO(dateKey), 'MMM', { locale: es })}</span>
+                                <span className="text-xl font-black leading-none">{format(parseNeutralDate(dateKey), 'd')}</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest opacity-80">{format(parseNeutralDate(dateKey), 'MMM', { locale: es })}</span>
                             </div>
                             <div>
                                 <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none mb-1">
@@ -583,7 +593,7 @@ export default function ServicesCalendar() {
                 const isSelected = isSameDay(day, selectedDate);
 
                 // Filter events for this day
-                const dayEvents = events.filter(ev => isSameDay(parseISO(ev.service_date), cloneDay));
+                const dayEvents = events.filter(ev => isSameDay(parseNeutralDate(ev.service_date), cloneDay));
 
                 days.push(
                     <div

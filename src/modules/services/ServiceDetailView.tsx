@@ -20,6 +20,43 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../hooks/useAuth';
 import { useCurrency } from '../../contexts/CurrencyContext';
 
+// Helper functions for timezone-neutral date manipulation
+const getNeutralDateString = (dateStr: string) => {
+    if (!dateStr) return '';
+    return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
+};
+
+const formatNeutralDate = (dateStr: string) => {
+    const neutralStr = getNeutralDateString(dateStr);
+    if (!neutralStr) return '';
+    const parts = neutralStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [year, month, day] = parts;
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const monthIndex = parseInt(month, 10) - 1;
+    const monthName = months[monthIndex] || month;
+    return `${day} ${monthName} ${year}`;
+};
+
+const getNeutralMonthShort = (dateStr: string) => {
+    const neutralStr = getNeutralDateString(dateStr);
+    if (!neutralStr) return '';
+    const parts = neutralStr.split('-');
+    if (parts.length !== 3) return '';
+    const month = parts[1];
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const monthIndex = parseInt(month, 10) - 1;
+    return months[monthIndex] || '';
+};
+
+const getNeutralDay = (dateStr: string) => {
+    const neutralStr = getNeutralDateString(dateStr);
+    if (!neutralStr) return '';
+    const parts = neutralStr.split('-');
+    if (parts.length !== 3) return '';
+    return parts[2];
+};
+
 interface Props {
     event: any;
     onClose: () => void;
@@ -40,7 +77,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
-        const dateStr = new Date(detail.service_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+        const dateStr = formatNeutralDate(detail.service_date);
         const nowStr = new Date().toLocaleString('es-ES');
 
         const itemsHtml = detail.selected_items && detail.selected_items.length > 0
@@ -169,7 +206,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
         `;
 
         event.details.forEach((detail: any, index: number) => {
-            const dateStr = new Date(detail.service_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+            const dateStr = formatNeutralDate(detail.service_date);
             const itemsHtml = detail.selected_items && detail.selected_items.length > 0
                 ? detail.selected_items.map((item: any) => `<li>• ${item.name} [x${item.quantity || 1} ${item.unit || 'Ud'}]</li>`).join('')
                 : '<p style="font-style: italic; color: #666;">No hay items seleccionados</p>';
@@ -381,8 +418,8 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                     {/* Timeline Node */}
                                     <div className="hidden md:flex flex-shrink-0 w-20 h-20 rounded-3xl bg-white dark:bg-gray-800 border-2 border-primary/20 items-center justify-center z-10 shadow-sm group-hover:border-primary transition-colors">
                                         <div className="flex flex-col items-center">
-                                            <span className="text-xs font-black text-primary uppercase">{new Date(detail.service_date).toLocaleDateString('es-ES', { month: 'short' })}</span>
-                                            <span className="text-xl font-black text-gray-900 dark:text-white tracking-tighter">{new Date(detail.service_date).getDate()}</span>
+                                            <span className="text-xs font-black text-primary uppercase">{getNeutralMonthShort(detail.service_date)}</span>
+                                            <span className="text-xl font-black text-gray-900 dark:text-white tracking-tighter">{getNeutralDay(detail.service_date)}</span>
                                         </div>
                                     </div>
 

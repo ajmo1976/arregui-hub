@@ -23,6 +23,24 @@ import ServiceDetailView from './ServiceDetailView';
 import { useAuthStore } from '../../hooks/useAuth';
 import { useCurrency } from '../../contexts/CurrencyContext';
 
+// Helper functions for timezone-neutral date manipulation
+const getNeutralDateString = (dateStr: string) => {
+    if (!dateStr) return '';
+    return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
+};
+
+const formatNeutralDate = (dateStr: string) => {
+    const neutralStr = getNeutralDateString(dateStr);
+    if (!neutralStr) return '';
+    const parts = neutralStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [year, month, day] = parts;
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const monthIndex = parseInt(month, 10) - 1;
+    const monthName = months[monthIndex] || month;
+    return `${day} ${monthName} ${year}`;
+};
+
 export default function ServicesView() {
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -33,6 +51,15 @@ export default function ServicesView() {
     const [editingEvent, setEditingEvent] = useState<any>(null);
     const { user } = useAuthStore();
     const { canShowPrices } = useCurrency();
+
+    // Filtros avanzados
+    const [showFilters, setShowFilters] = useState(false);
+    const [filterId, setFilterId] = useState('');
+    const [filterTitleResp, setFilterTitleResp] = useState('');
+    const [filterDate, setFilterDate] = useState('');
+    const [filterLocation, setFilterLocation] = useState('');
+    const [filterCostCenter, setFilterCostCenter] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
 
     const fetchEvents = async () => {
         setLoading(true);
@@ -86,11 +113,67 @@ export default function ServicesView() {
     }, []);
 
     const filteredEvents = events
-        .filter(ev =>
-            ev.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            ev.responsible.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            ev.cost_center.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        .filter(ev => {
+            // 1. Buscador global (si está escrito)
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                const matchesGlobal = 
+                    ev.id.toString().includes(term) ||
+                    ev.title.toLowerCase().includes(term) ||
+                    ev.responsible.toLowerCase().includes(term) ||
+                    ev.cost_center.toLowerCase().includes(term) ||
+                    (ev.details && ev.details.some((d: any) => 
+                        d.location.toLowerCase().includes(term) ||
+                        formatNeutralDate(d.service_date).toLowerCase().includes(term) ||
+                        getNeutralDateString(d.service_date).includes(term)
+                    ));
+                if (!matchesGlobal) return false;
+            }
+
+            // 2. Filtro por Número de Registro (ID)
+            if (filterId) {
+                if (!ev.id.toString().includes(filterId.trim())) return false;
+            }
+
+            // 3. Filtro por Servicio / Responsable
+            if (filterTitleResp) {
+                const term = filterTitleResp.toLowerCase();
+                const matchesTitleResp = 
+                    ev.title.toLowerCase().includes(term) ||
+                    ev.responsible.toLowerCase().includes(term);
+                if (!matchesTitleResp) return false;
+            }
+
+            // 4. Filtro por Fecha (service_date)
+            if (filterDate) {
+                const matchesDate = ev.details && ev.details.some((d: any) => {
+                    return getNeutralDateString(d.service_date) === filterDate;
+                });
+                if (!matchesDate) return false;
+            }
+
+            // 5. Filtro por Lugar (location)
+            if (filterLocation) {
+                const term = filterLocation.toLowerCase();
+                const matchesLoc = ev.details && ev.details.some((d: any) => 
+                    d.location.toLowerCase().includes(term)
+                );
+                if (!matchesLoc) return false;
+            }
+
+            // 6. Filtro por Logística (Centro de Costo)
+            if (filterCostCenter) {
+                const term = filterCostCenter.toLowerCase();
+                if (!ev.cost_center.toLowerCase().includes(term)) return false;
+            }
+
+            // 7. Filtro por Estado (status)
+            if (filterStatus) {
+                if (ev.status !== filterStatus) return false;
+            }
+
+            return true;
+        })
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return (
@@ -145,18 +228,141 @@ export default function ServicesView() {
 
             {activeTab === 'events' ? (
                 <>
-                    {/* Search & Stats Section */}
-                    <div className="flex flex-col lg:flex-row gap-6">
-                        <div className="flex-1 relative group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={20} />
-                            <input
-                                type="text"
-                                placeholder="Buscar por evento, responsable o centro de costo..."
-                                className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 shadow-sm transition-all font-medium"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                    {/* Search & Advanced Filters Section */}
+                    <div className="space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex-1 relative group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={20} />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por evento, responsable, ubicación o número..."
+                                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 shadow-sm transition-all font-medium text-sm"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={`flex items-center justify-center gap-2 px-5 py-4 border rounded-2xl font-bold text-sm transition-all active:scale-95 ${
+                                    showFilters 
+                                        ? 'bg-primary/10 border-primary text-primary' 
+                                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 hover:bg-gray-50'
+                                }`}
+                            >
+                                <Filter size={18} />
+                                <span>Filtros Avanzados</span>
+                                {(filterId || filterTitleResp || filterDate || filterLocation || filterCostCenter || filterStatus) && (
+                                    <span className="w-2.5 h-2.5 bg-primary rounded-full animate-pulse" />
+                                )}
+                            </button>
+                            {(searchTerm || filterId || filterTitleResp || filterDate || filterLocation || filterCostCenter || filterStatus) && (
+                                <button
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setFilterId('');
+                                        setFilterTitleResp('');
+                                        setFilterDate('');
+                                        setFilterLocation('');
+                                        setFilterCostCenter('');
+                                        setFilterStatus('');
+                                    }}
+                                    className="px-5 py-4 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm rounded-2xl active:scale-95 transition-all"
+                                >
+                                    Limpiar
+                                </button>
+                            )}
                         </div>
+
+                        {/* Collapsible Panel */}
+                        <AnimatePresence>
+                            {showFilters && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 p-6 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+                                        {/* 1. Registro (Nro Servicio) */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Registro (Nro. Servicio)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Ej: 5"
+                                                value={filterId}
+                                                onChange={(e) => setFilterId(e.target.value)}
+                                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none text-xs focus:border-primary text-gray-900 dark:text-white"
+                                            />
+                                        </div>
+
+                                        {/* 2. Servicio / Responsable */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Servicio / Responsable</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Nombre o responsable..."
+                                                value={filterTitleResp}
+                                                onChange={(e) => setFilterTitleResp(e.target.value)}
+                                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none text-xs focus:border-primary text-gray-900 dark:text-white"
+                                            />
+                                        </div>
+
+                                        {/* 3. Fecha */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Fecha</label>
+                                            <input
+                                                type="date"
+                                                value={filterDate}
+                                                onChange={(e) => setFilterDate(e.target.value)}
+                                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none text-xs focus:border-primary text-gray-900 dark:text-white"
+                                            />
+                                        </div>
+
+                                        {/* 4. Lugar */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Lugar</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Ubicación..."
+                                                value={filterLocation}
+                                                onChange={(e) => setFilterLocation(e.target.value)}
+                                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none text-xs focus:border-primary text-gray-900 dark:text-white"
+                                            />
+                                        </div>
+
+                                        {/* 5. Logística (Centro de Costo) */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Logística (Centro Costo)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Centro de costo..."
+                                                value={filterCostCenter}
+                                                onChange={(e) => setFilterCostCenter(e.target.value)}
+                                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none text-xs focus:border-primary text-gray-900 dark:text-white"
+                                            />
+                                        </div>
+
+                                        {/* 6. Estado */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Estado</label>
+                                            <select
+                                                value={filterStatus}
+                                                onChange={(e) => setFilterStatus(e.target.value)}
+                                                className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none text-xs focus:border-primary text-gray-900 dark:text-white"
+                                            >
+                                                <option value="">Todos</option>
+                                                <option value="Abierta">Abierta</option>
+                                                <option value="Pendiente">Pendiente</option>
+                                                <option value="Confirmado">Confirmado</option>
+                                                <option value="Cancelado">Cancelado</option>
+                                                <option value="Cerrada">Cerrada</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
                     {/* Main Content Table (Like Image 4) */}
@@ -245,7 +451,7 @@ export default function ServicesView() {
                                                                 <>
                                                                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm font-medium">
                                                                         <Calendar size={14} className="text-gray-400" />
-                                                                        <span>{new Date(ev.details[0].service_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })} • {ev.details[0].service_time}</span>
+                                                                        <span>{formatNeutralDate(ev.details[0].service_date)} • {ev.details[0].service_time}</span>
                                                                     </div>
                                                                     <div className="flex items-center gap-2 text-gray-500 text-sm">
                                                                         <MapPin size={14} className="text-gray-400" />
