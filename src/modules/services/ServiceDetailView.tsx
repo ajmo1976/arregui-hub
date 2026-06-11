@@ -436,17 +436,37 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                                 </h4>
                                                 <div className="grid grid-cols-1 gap-2">
                                                     {detail.selected_items && detail.selected_items.length > 0 ? (
-                                                        detail.selected_items.map((item: any) => (
-                                                            <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700 group/item hover:border-primary/30 transition-all">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
-                                                                        <CheckCircle2 size={12} className="text-primary" />
+                                                        detail.selected_items.map((item: any) => {
+                                                            const byCase = item.is_sold_by_case;
+                                                            const mult = (item.unit === 'Caja' && byCase) ? (item.units_per_case || 1) : 1;
+                                                            const itemSubtotal = (item.price || 0) * (item.quantity || 1) * mult;
+
+                                                            return (
+                                                                <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700 group/item hover:border-primary/30 transition-all">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                                                                            <CheckCircle2 size={12} className="text-primary" />
+                                                                        </div>
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-tighter">{item.name}</span>
+                                                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
+                                                                                Cant: {item.quantity || 1} {item.unit || 'Ud'}
+                                                                            </span>
+                                                                        </div>
                                                                     </div>
-                                                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-tighter">{item.name}</span>
+                                                                    {canShowPrices && (
+                                                                        <div className="text-right">
+                                                                            <span className="text-xs font-black text-primary block">
+                                                                                {formatPrice(itemSubtotal)}
+                                                                            </span>
+                                                                            <span className="text-[9px] text-gray-400 font-medium block">
+                                                                                {formatPrice(item.price || 0)} / {item.unit || 'Ud'}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                                {canShowPrices && <span className="text-[10px] font-black text-gray-400">{formatPrice(item.price || 0)}</span>}
-                                                            </div>
-                                                        ))
+                                                            );
+                                                        })
                                                     ) : (
                                                         <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
                                                             <p className="text-xs text-gray-400 italic font-medium">No hay ítems de menú seleccionados</p>

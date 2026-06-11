@@ -29,6 +29,10 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const canShowPrices = user?.is_superuser || (user?.role_name?.toLowerCase() !== 'básico' && user?.role_name?.toLowerCase() !== 'basico');
 
     useEffect(() => {
+        if (!user) {
+            setIsLoading(false);
+            return;
+        }
         const fetchConfig = async () => {
             try {
                 const res = await inventoryApi.getSystemConfig();
@@ -40,7 +44,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
         };
         fetchConfig();
-    }, []);
+    }, [user]);
 
     const setCurrency = (newCurrency: Currency) => {
         setCurrencyState(newCurrency);
