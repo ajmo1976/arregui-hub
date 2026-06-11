@@ -12,7 +12,8 @@ import {
     MoreVertical,
     Edit3,
     Trash2,
-    Copy
+    Copy,
+    Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -106,6 +107,295 @@ export default function ServicesView() {
             details: cleanDetails
         });
         toast.info('Copiando datos para nuevo registro...');
+    };
+
+    const handlePrintReport = () => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const nowStr = new Date().toLocaleString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // Generate table rows for the summary
+        const tableRowsHtml = filteredEvents.map(ev => {
+            const detail = ev.details?.[0] || {};
+            const dateStr = formatNeutralDate(detail.service_date);
+            const amountStr = canShowPrices 
+                ? `$${ev.details?.reduce((acc: number, d: any) => acc + d.estimated_amount, 0).toFixed(2)}` 
+                : '***';
+
+            return `
+                <tr>
+                    <td><strong>#${ev.id}</strong></td>
+                    <td>${ev.responsible}</td>
+                    <td>${dateStr} ${detail.service_time || ''}</td>
+                    <td>${detail.location || 'N/A'}</td>
+                    <td>${detail.attendees || 0}</td>
+                    <td>${ev.cost_center || 'N/A'}</td>
+                    <td><span class="status-badge status-${ev.status.toLowerCase()}">${ev.status}</span></td>
+                    ${canShowPrices ? `<td><strong>${amountStr}</strong></td>` : ''}
+                </tr>
+            `;
+        }).join('');
+
+        // Generate details section for each service
+        const detailsSectionsHtml = filteredEvents.map(ev => {
+            const detailsHtml = (ev.details || []).map((d: any, idx: number) => {
+                const dateStr = formatNeutralDate(d.service_date);
+                const itemsHtml = d.selected_items && d.selected_items.length > 0
+                    ? d.selected_items.map((item: any) => {
+                        const byCase = item.is_sold_by_case;
+                        const mult = (item.unit === 'Caja' && byCase) ? (item.units_per_case || 1) : 1;
+                        const qty = item.quantity || 1;
+                        return `<li>• ${item.name} (${qty} ${item.unit || 'Ud'})${canShowPrices ? ` - Subtotal: $${(item.price * qty * mult).toFixed(2)}` : ''}</li>`;
+                    }).join('')
+                    : '<li class="no-items">No hay ítems seleccionados</li>';
+
+                return `
+                    <div class="service-detail-block">
+                        <div class="block-header">
+                            Servicio ${idx + 1} de ${ev.details.length}: ${dateStr} • ${d.service_time} • ${d.location} • ${d.attendees} PAX
+                        </div>
+                        <div class="block-body">
+                            <div class="items-section">
+                                <strong>Menú Solicitado:</strong>
+                                <ul>${itemsHtml}</ul>
+                            </div>
+                            <div class="logistic-section">
+                                <strong>Logística / Requerimientos:</strong>
+                                <p>${d.additional_requirements || 'Sin requerimientos específicos.'}</p>
+                            </div>
+                            <div class="obs-section">
+                                <strong>Observaciones:</strong>
+                                <p>${d.observations || 'Sin observaciones.'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="event-report-card">
+                    <div class="card-header">
+                        REGISTRO #${ev.id} - ${ev.title}
+                    </div>
+                    <div class="card-meta">
+                        <span><strong>Responsable:</strong> ${ev.responsible}</span> | 
+                        <span><strong>Centro de Costo:</strong> ${ev.cost_center}</span> | 
+                        <span><strong>Estado:</strong> ${ev.status}</span>
+                    </div>
+                    ${detailsHtml}
+                </div>
+            `;
+        }).join('');
+
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Reporte de Servicios - Arregui Hub</title>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+                        body {
+                            font-family: 'Inter', sans-serif;
+                            color: #111827;
+                            line-height: 1.5;
+                            padding: 30px;
+                            background-color: #fff;
+                        }
+                        .header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            border-bottom: 3px solid #111827;
+                            padding-bottom: 20px;
+                            margin-bottom: 30px;
+                        }
+                        .header-title h1 {
+                            font-size: 24px;
+                            font-weight: 800;
+                            margin: 0;
+                            text-transform: uppercase;
+                            letter-spacing: -0.025em;
+                        }
+                        .header-title p {
+                            margin: 5px 0 0 0;
+                            color: #4b5563;
+                            font-size: 14px;
+                            font-weight: 600;
+                        }
+                        .header-meta {
+                            text-align: right;
+                            font-size: 12px;
+                            color: #6b7280;
+                        }
+                        h2.section-title {
+                            font-size: 16px;
+                            font-weight: 800;
+                            text-transform: uppercase;
+                            border-bottom: 2px solid #e5e7eb;
+                            padding-bottom: 8px;
+                            margin-top: 40px;
+                            margin-bottom: 20px;
+                            letter-spacing: 0.05em;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 30px;
+                            font-size: 13px;
+                        }
+                        th {
+                            background-color: #f9fafb;
+                            font-weight: 700;
+                            text-transform: uppercase;
+                            font-size: 11px;
+                            letter-spacing: 0.05em;
+                            color: #374151;
+                            border-bottom: 2px solid #d1d5db;
+                            padding: 12px 10px;
+                            text-align: left;
+                        }
+                        td {
+                            padding: 12px 10px;
+                            border-bottom: 1px solid #e5e7eb;
+                        }
+                        tr:last-child td {
+                            border-bottom: 2px solid #d1d5db;
+                        }
+                        .status-badge {
+                            font-size: 10px;
+                            font-weight: 800;
+                            text-transform: uppercase;
+                            padding: 2px 8px;
+                            border-radius: 6px;
+                            border: 1px solid transparent;
+                            display: inline-block;
+                        }
+                        .status-abierta { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+                        .status-pendiente { background-color: #fffbeb; color: #b45309; border-color: #fde68a; }
+                        .status-confirmado { background-color: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+                        .status-cancelado { background-color: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+                        .status-cerrada { background-color: #f3f4f6; color: #374151; border-color: #e5e7eb; }
+                        
+                        .event-report-card {
+                            border: 1px solid #e5e7eb;
+                            border-radius: 12px;
+                            margin-bottom: 25px;
+                            page-break-inside: avoid;
+                            overflow: hidden;
+                        }
+                        .card-header {
+                            background-color: #111827;
+                            color: #fff;
+                            font-weight: 800;
+                            font-size: 14px;
+                            padding: 12px 20px;
+                            text-transform: uppercase;
+                        }
+                        .card-meta {
+                            background-color: #f3f4f6;
+                            padding: 8px 20px;
+                            font-size: 12px;
+                            color: #4b5563;
+                            border-bottom: 1px solid #e5e7eb;
+                        }
+                        .service-detail-block {
+                            padding: 20px;
+                            border-bottom: 1px dashed #e5e7eb;
+                        }
+                        .service-detail-block:last-child {
+                            border-bottom: none;
+                        }
+                        .block-header {
+                            font-weight: 700;
+                            font-size: 13px;
+                            color: #111827;
+                            margin-bottom: 12px;
+                            background-color: #f9fafb;
+                            padding: 6px 12px;
+                            border-radius: 6px;
+                            border-left: 3px solid #111827;
+                        }
+                        .block-body {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 20px;
+                            font-size: 12px;
+                        }
+                        @media (max-width: 600px) {
+                            .block-body {
+                                grid-template-columns: 1fr;
+                            }
+                        }
+                        .items-section ul {
+                            margin: 5px 0 0 0;
+                            padding-left: 15px;
+                        }
+                        .items-section li {
+                            margin-bottom: 4px;
+                        }
+                        .logistic-section p, .obs-section p {
+                            margin: 5px 0 0 0;
+                            color: #374151;
+                        }
+                        @media print {
+                            body {
+                                padding: 0;
+                            }
+                            .no-print {
+                                display: none;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="header-title">
+                            <h1>Reporte de Servicios de Catering</h1>
+                            <p>Arregui Hub — Gestión Operativa</p>
+                        </div>
+                        <div class="header-meta">
+                            Generado: ${nowStr}<br>
+                            Servicios Filtrados: ${filteredEvents.length}
+                        </div>
+                    </div>
+
+                    <h2 class="section-title">Resumen de Registros</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Reg.</th>
+                                <th>Responsable</th>
+                                <th>Fecha y Hora</th>
+                                <th>Ubicación / Lugar</th>
+                                <th>PAX</th>
+                                <th>Centro Costo</th>
+                                <th>Estado</th>
+                                ${canShowPrices ? '<th>Monto</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRowsHtml}
+                        </tbody>
+                    </table>
+
+                    <h2 class="section-title">Detalle de Solicitudes</h2>
+                    ${detailsSectionsHtml}
+
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                        };
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     };
 
     useEffect(() => {
@@ -254,6 +544,14 @@ export default function ServicesView() {
                                 {(filterId || filterTitleResp || filterDate || filterLocation || filterCostCenter || filterStatus) && (
                                     <span className="w-2.5 h-2.5 bg-primary rounded-full animate-pulse" />
                                 )}
+                            </button>
+                            <button
+                                onClick={handlePrintReport}
+                                className="flex items-center justify-center gap-2 px-5 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 hover:bg-gray-50 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-sm"
+                                title="Imprimir Reporte de Servicios"
+                            >
+                                <Printer size={18} />
+                                <span>Imprimir Reporte</span>
                             </button>
                             {(searchTerm || filterId || filterTitleResp || filterDate || filterLocation || filterCostCenter || filterStatus) && (
                                 <button
