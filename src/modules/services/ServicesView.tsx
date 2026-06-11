@@ -125,9 +125,6 @@ export default function ServicesView() {
         const tableRowsHtml = filteredEvents.map(ev => {
             const detail = ev.details?.[0] || {};
             const dateStr = formatNeutralDate(detail.service_date);
-            const amountStr = canShowPrices 
-                ? `$${ev.details?.reduce((acc: number, d: any) => acc + d.estimated_amount, 0).toFixed(2)}` 
-                : '***';
 
             return `
                 <tr>
@@ -138,7 +135,6 @@ export default function ServicesView() {
                     <td>${detail.attendees || 0}</td>
                     <td>${ev.cost_center || 'N/A'}</td>
                     <td><span class="status-badge status-${ev.status.toLowerCase()}">${ev.status}</span></td>
-                    ${canShowPrices ? `<td><strong>${amountStr}</strong></td>` : ''}
                 </tr>
             `;
         }).join('');
@@ -149,10 +145,8 @@ export default function ServicesView() {
                 const dateStr = formatNeutralDate(d.service_date);
                 const itemsHtml = d.selected_items && d.selected_items.length > 0
                     ? d.selected_items.map((item: any) => {
-                        const byCase = item.is_sold_by_case;
-                        const mult = (item.unit === 'Caja' && byCase) ? (item.units_per_case || 1) : 1;
                         const qty = item.quantity || 1;
-                        return `<li>• ${item.name} (${qty} ${item.unit || 'Ud'})${canShowPrices ? ` - Subtotal: $${(item.price * qty * mult).toFixed(2)}` : ''}</li>`;
+                        return `<li>• ${item.name} (${qty} ${item.unit || 'Ud'})</li>`;
                     }).join('')
                     : '<li class="no-items">No hay ítems seleccionados</li>';
 
@@ -376,7 +370,6 @@ export default function ServicesView() {
                                 <th>PAX</th>
                                 <th>Centro Costo</th>
                                 <th>Estado</th>
-                                ${canShowPrices ? '<th>Monto</th>' : ''}
                             </tr>
                         </thead>
                         <tbody>
