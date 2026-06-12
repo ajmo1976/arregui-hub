@@ -1008,17 +1008,22 @@ Error generating stack: `+O.message+`
                             padding: 5px;
                             border: 1px solid #e5e7eb;
                             vertical-align: middle;
+                            font-size: 8.5px;
+                        }
+                        td strong {
+                            font-size: 9px;
                         }
                         .text-center {
                             text-align: center;
                         }
                         .text-muted {
                             color: #6b7280;
-                            font-size: 8.5px;
+                            font-size: 8px;
                         }
                         .menu-cell {
-                            font-size: 9px;
-                            color: #1f2937;
+                            font-size: 10.5px;
+                            font-weight: 700;
+                            color: #111827;
                             word-break: break-word;
                             max-width: 320px;
                         }
