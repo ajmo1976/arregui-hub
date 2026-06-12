@@ -66,6 +66,64 @@ const parseTimeToMinutes = (timeStr: string = "") => {
     }
 };
 
+// Helper to get status-specific colors
+const getStatusColors = (status: string) => {
+    const s = status ? status.trim() : "";
+    switch (s) {
+        case 'Abierto':
+            return {
+                bg: 'bg-blue-50 dark:bg-blue-900/20',
+                border: 'border-blue-100 hover:border-blue-300 dark:border-blue-800/40 dark:hover:border-blue-700',
+                text: 'text-blue-700 dark:text-blue-300',
+                dot: 'bg-blue-500 dark:bg-blue-400',
+                badgeBg: 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800',
+                solidBg: 'bg-blue-600 dark:bg-blue-500',
+                glow: 'shadow-blue-500/20'
+            };
+        case 'Reprogramado':
+            return {
+                bg: 'bg-amber-50 dark:bg-amber-900/20',
+                border: 'border-amber-100 hover:border-amber-300 dark:border-amber-800/40 dark:hover:border-amber-700',
+                text: 'text-amber-700 dark:text-amber-300',
+                dot: 'bg-amber-500 dark:bg-amber-400',
+                badgeBg: 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800',
+                solidBg: 'bg-amber-600 dark:bg-amber-500',
+                glow: 'shadow-amber-500/20'
+            };
+        case 'Facturado':
+            return {
+                bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+                border: 'border-emerald-100 hover:border-emerald-300 dark:border-emerald-800/40 dark:hover:border-emerald-700',
+                text: 'text-emerald-700 dark:text-emerald-300',
+                dot: 'bg-emerald-500 dark:bg-emerald-400',
+                badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800',
+                solidBg: 'bg-emerald-600 dark:bg-emerald-500',
+                glow: 'shadow-emerald-500/20'
+            };
+        case 'Cancelado':
+            return {
+                bg: 'bg-red-50 dark:bg-red-900/20',
+                border: 'border-red-100 hover:border-red-300 dark:border-red-800/40 dark:hover:border-red-700',
+                text: 'text-red-700 dark:text-red-300',
+                dot: 'bg-red-500 dark:bg-red-400',
+                badgeBg: 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800',
+                solidBg: 'bg-red-600 dark:bg-red-500',
+                glow: 'shadow-red-500/20'
+            };
+        case 'Cerrado':
+        default:
+            return {
+                bg: 'bg-gray-50 dark:bg-gray-800/20',
+                border: 'border-gray-200 hover:border-gray-300 dark:border-gray-700/40 dark:hover:border-gray-600',
+                text: 'text-gray-700 dark:text-gray-300',
+                dot: 'bg-gray-500 dark:bg-gray-400',
+                badgeBg: 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800/40 dark:text-gray-300 dark:border-gray-700',
+                solidBg: 'bg-gray-600 dark:bg-gray-500',
+                glow: 'shadow-gray-500/20'
+            };
+    }
+};
+
 export default function ServicesCalendar() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [events, setEvents] = useState<any[]>([]);
@@ -379,6 +437,7 @@ export default function ServicesCalendar() {
                                         const width = 100 / totalCols;
                                         const left = ev.col * width;
 
+                                        const colors = getStatusColors(ev.status);
                                         return (
                                             <motion.div
                                                 key={`${ev.id}-${evIdx}`}
@@ -394,7 +453,7 @@ export default function ServicesCalendar() {
                                                     width: `${width - 1}%`,
                                                     zIndex: 10 + ev.col
                                                 }}
-                                                className="absolute p-2 rounded-xl bg-primary shadow-xl shadow-primary/20 text-white cursor-pointer hover:scale-[1.02] transition-transform overflow-hidden min-h-[70px] border border-white/20"
+                                                className={`absolute p-2 rounded-xl ${colors.solidBg} shadow-xl ${colors.glow} text-white cursor-pointer hover:scale-[1.02] transition-transform overflow-hidden min-h-[70px] border border-white/20`}
                                             >
                                                 <div className="flex items-center gap-1 mb-1">
                                                     <Clock size={10} strokeWidth={3} />
@@ -445,49 +504,56 @@ export default function ServicesCalendar() {
 
                 <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {dayEvents.length > 0 ? (
-                        dayEvents.sort((a, b) => a.service_time.localeCompare(b.service_time)).map((ev, idx) => (
-                            <motion.div
-                                key={`${ev.id}-${idx}`}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.1 }}
-                                onClick={() => setSelectedEvent(ev)}
-                                className="group relative p-6 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:border-primary/30 hover:shadow-2xl transition-all cursor-pointer overflow-hidden"
-                            >
-                                <div className="absolute top-0 right-0 p-4">
-                                    <div className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-full uppercase tracking-widest border border-primary/10">
-                                        {ev.service_time}
-                                    </div>
-                                </div>
-                                <div className="space-y-4 pt-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-400 group-hover:text-primary transition-colors">
-                                            <Clock size={20} />
+                        dayEvents.sort((a, b) => a.service_time.localeCompare(b.service_time)).map((ev, idx) => {
+                            const colors = getStatusColors(ev.status);
+                            return (
+                                <motion.div
+                                    key={`${ev.id}-${idx}`}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.1 }}
+                                    onClick={() => setSelectedEvent(ev)}
+                                    className="group relative pl-8 pr-6 py-6 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:border-primary/30 hover:shadow-2xl transition-all cursor-pointer overflow-hidden"
+                                >
+                                    <div className={`absolute top-0 left-0 bottom-0 w-2 ${colors.solidBg}`} />
+                                    <div className="absolute top-0 right-0 p-4 flex gap-2">
+                                        <div className={`px-2.5 py-1 ${colors.badgeBg} text-[9px] font-black rounded-full uppercase tracking-widest`}>
+                                            {ev.status}
                                         </div>
-                                        <h4 className="text-lg font-black text-gray-900 dark:text-white leading-tight pr-12">
-                                            {ev.title}
-                                        </h4>
+                                        <div className="px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[9px] font-black rounded-full uppercase tracking-widest">
+                                            {ev.service_time}
+                                        </div>
                                     </div>
-                                    <div className="w-full h-px bg-gray-50 dark:bg-gray-700" />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Lugar</span>
-                                            <div className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300">
-                                                <MapPin size={14} className="text-primary/60" />
-                                                <span className="truncate">{ev.location}</span>
+                                    <div className="space-y-4 pt-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-400 group-hover:text-primary transition-colors">
+                                                <Clock size={20} />
+                                            </div>
+                                            <h4 className="text-lg font-black text-gray-900 dark:text-white leading-tight pr-24">
+                                                {ev.title}
+                                            </h4>
+                                        </div>
+                                        <div className="w-full h-px bg-gray-50 dark:bg-gray-700" />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Lugar</span>
+                                                <div className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300">
+                                                    <MapPin size={14} className="text-primary/60" />
+                                                    <span className="truncate">{ev.location}</span>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Personas</span>
+                                                <div className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300">
+                                                    <Users size={14} className="text-primary/60" />
+                                                    <span>{ev.attendees} PAX</span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Personas</span>
-                                            <div className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300">
-                                                <Users size={14} className="text-primary/60" />
-                                                <span>{ev.attendees} PAX</span>
-                                            </div>
-                                        </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        ))
+                                </motion.div>
+                            );
+                        })
                     ) : (
                         <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
                             <div className="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-3xl flex items-center justify-center text-gray-300 dark:text-gray-600 mb-6">
@@ -540,32 +606,41 @@ export default function ServicesCalendar() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {dayEvents.map((ev, idx) => (
-                                <motion.div
-                                    key={`${ev.id}-${idx}`}
-                                    onClick={() => setSelectedEvent(ev)}
-                                    className="p-5 rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-primary/30 transition-all cursor-pointer group"
-                                >
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-full uppercase">
-                                            {ev.service_time}
+                            {dayEvents.map((ev, idx) => {
+                                const colors = getStatusColors(ev.status);
+                                return (
+                                    <motion.div
+                                        key={`${ev.id}-${idx}`}
+                                        onClick={() => setSelectedEvent(ev)}
+                                        className="p-5 rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden pl-7"
+                                    >
+                                        <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${colors.solidBg}`} />
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex gap-2">
+                                                <span className={`px-2.5 py-0.5 ${colors.badgeBg} text-[9px] font-black rounded-full uppercase`}>
+                                                    {ev.status}
+                                                </span>
+                                                <div className="px-2.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[9px] font-black rounded-full uppercase">
+                                                    {ev.service_time}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <h4 className="text-sm font-black text-gray-800 dark:text-gray-200 mb-2 truncate">
-                                        {ev.title}
-                                    </h4>
-                                    <div className="flex items-center gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                                        <div className="flex items-center gap-1">
-                                            <MapPin size={12} />
-                                            <span>{ev.location}</span>
+                                        <h4 className="text-sm font-black text-gray-800 dark:text-gray-200 mb-2 truncate">
+                                            {ev.title}
+                                        </h4>
+                                        <div className="flex items-center gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                                            <div className="flex items-center gap-1">
+                                                <MapPin size={12} />
+                                                <span>{ev.location}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Users size={12} />
+                                                <span>{ev.attendees} PAX</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            <Users size={12} />
-                                            <span>{ev.attendees} PAX</span>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))}
+                                    </motion.div>
+                                );
+                            })}
                         </div>
                     </div>
                 ))}
@@ -618,28 +693,31 @@ export default function ServicesCalendar() {
                         </div>
 
                         <div className="space-y-1 overflow-y-auto max-h-[100px] custom-scrollbar pr-1">
-                            {dayEvents.map((ev, idx) => (
-                                <motion.div
-                                    key={`${ev.id}-${idx}`}
-                                    initial={{ opacity: 0, x: -5 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedEvent(ev);
-                                    }}
-                                    className="p-1.5 rounded-lg bg-primary/5 border border-primary/10 hover:border-primary/40 transition-all cursor-pointer overflow-hidden group/ev"
-                                >
-                                    <div className="flex items-center gap-1.5 mb-0.5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                                        <span className="text-[9px] font-black text-primary uppercase truncate leading-none">
-                                            {ev.service_time}
-                                        </span>
-                                    </div>
-                                    <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate tracking-tight">
-                                        {ev.title}
-                                    </p>
-                                </motion.div>
-                            ))}
+                            {dayEvents.map((ev, idx) => {
+                                const colors = getStatusColors(ev.status);
+                                return (
+                                    <motion.div
+                                        key={`${ev.id}-${idx}`}
+                                        initial={{ opacity: 0, x: -5 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedEvent(ev);
+                                        }}
+                                        className={`p-1.5 rounded-lg ${colors.bg} border ${colors.border} transition-all cursor-pointer overflow-hidden group/ev`}
+                                    >
+                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
+                                            <span className={`text-[9px] font-black ${colors.text} uppercase truncate leading-none`}>
+                                                {ev.service_time}
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate tracking-tight">
+                                            {ev.title}
+                                        </p>
+                                    </motion.div>
+                                );
+                            })}
                         </div>
                     </div>
                 );
