@@ -270,11 +270,11 @@ export default function ServicesView() {
                             border: 1px solid transparent;
                             display: inline-block;
                         }
-                        .status-abierta { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-                        .status-pendiente { background-color: #fffbeb; color: #b45309; border-color: #fde68a; }
-                        .status-confirmado { background-color: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+                        .status-abierto { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
                         .status-cancelado { background-color: #fef2f2; color: #b91c1c; border-color: #fecaca; }
-                        .status-cerrada { background-color: #f3f4f6; color: #374151; border-color: #e5e7eb; }
+                        .status-reprogramado { background-color: #fffbeb; color: #b45309; border-color: #fde68a; }
+                        .status-cerrado { background-color: #f3f4f6; color: #374151; border-color: #e5e7eb; }
+                        .status-facturado { background-color: #ecfdf5; color: #047857; border-color: #a7f3d0; }
                         
                         .event-report-card {
                             border: 1px solid #e5e7eb;
@@ -843,11 +843,11 @@ export default function ServicesView() {
                                                 className="w-full px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none text-xs focus:border-primary text-gray-900 dark:text-white"
                                             >
                                                 <option value="">Todos</option>
-                                                <option value="Abierta">Abierta</option>
-                                                <option value="Pendiente">Pendiente</option>
-                                                <option value="Confirmado">Confirmado</option>
+                                                <option value="Abierto">Abierto</option>
                                                 <option value="Cancelado">Cancelado</option>
-                                                <option value="Cerrada">Cerrada</option>
+                                                <option value="Reprogramado">Reprogramado</option>
+                                                <option value="Cerrado">Cerrado</option>
+                                                <option value="Facturado">Facturado</option>
                                             </select>
                                         </div>
                                     </div>
@@ -981,9 +981,16 @@ export default function ServicesView() {
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-6">
-                                                        <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${ev.status === 'Abierta'
-                                                            ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:border-blue-800'
-                                                            : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:border-gray-600'
+                                                        <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                                            ev.status === 'Abierto'
+                                                                ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:border-blue-800'
+                                                                : ev.status === 'Reprogramado'
+                                                                    ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-800'
+                                                                    : ev.status === 'Facturado'
+                                                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800'
+                                                                        : ev.status === 'Cancelado'
+                                                                            ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:border-red-800'
+                                                                            : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:border-gray-600'
                                                             }`}>
                                                             {ev.status}
                                                         </span>

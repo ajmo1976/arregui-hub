@@ -282,11 +282,16 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                         <div>
                             <div className="flex items-center gap-3">
                                 <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-none">{event.title}</h2>
-                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${event.status === 'Abierta' || event.status === 'PENDIENTE'
-                                        ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-800'
-                                        : event.status === 'Confirmado' || event.status === 'Cerrada'
-                                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800'
-                                            : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:border-gray-600'
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                                    event.status === 'Abierto'
+                                        ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:border-blue-800'
+                                        : event.status === 'Reprogramado'
+                                            ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-800'
+                                            : event.status === 'Facturado'
+                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800'
+                                                : event.status === 'Cancelado'
+                                                    ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:border-red-800'
+                                                    : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:border-gray-600'
                                     }`}>
                                     {event.status}
                                 </span>

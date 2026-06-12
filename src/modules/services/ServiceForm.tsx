@@ -40,7 +40,7 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
         title: initialData?.title || '',
         responsible: initialData?.responsible || '',
         cost_center: initialData?.cost_center || '',
-        status: initialData?.status || 'Abierta'
+        status: initialData?.status || 'Abierto'
     });
     const [details, setDetails] = useState<any[]>(
         initialData?.details?.map((d: any) => ({
