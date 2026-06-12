@@ -927,8 +927,9 @@ Error generating stack: `+O.message+`
         `),D.document.close()},X=()=>{const D=window.open("","_blank");if(!D)return;const F=new Date().toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}),re=[];Z.forEach(se=>{const J=se.details||[];J.length===0?re.push(`
                     <tr>
                         <td class="text-center font-bold">#${se.id}</td>
-                        <td><strong>${se.title}</strong><br><small class="text-muted">Resp: ${se.responsible}</small></td>
                         <td class="text-center">-</td>
+                        <td class="text-center">-</td>
+                        <td><strong>${se.title}</strong><br><small class="text-muted">Resp: ${se.responsible}</small></td>
                         <td>-</td>
                         <td class="text-center">0</td>
                         <td><span class="no-items">Sin detalles</span></td>
@@ -936,8 +937,9 @@ Error generating stack: `+O.message+`
                 `):J.forEach((pe,Se)=>{const le=Jl(pe.service_date),xe=pe.service_time||"",Pe=pe.selected_items&&pe.selected_items.length>0?pe.selected_items.map(Ve=>`${Ve.name} (x${Ve.quantity})`).join(", "):"Sin menú",ce=J.length>1?`#${se.id}.${Se+1}`:`#${se.id}`;re.push(`
                         <tr>
                             <td class="text-center font-bold">${ce}</td>
+                            <td class="text-center">${le}</td>
+                            <td class="text-center">${xe}</td>
                             <td><strong>${se.title}</strong><br><small class="text-muted">Resp: ${se.responsible}</small></td>
-                            <td class="text-center">${le}<br>${xe}</td>
                             <td>${pe.location||"N/A"}</td>
                             <td class="text-center">${pe.attendees||0}</td>
                             <td class="menu-cell">${Pe}</td>
@@ -1050,10 +1052,11 @@ Error generating stack: `+O.message+`
                         <thead>
                             <tr>
                                 <th style="width: 6%; text-align: center;">Reg.</th>
-                                <th style="width: 25%;">Servicio / Responsable</th>
-                                <th style="width: 12%; text-align: center;">Fecha y Hora</th>
-                                <th style="width: 18%;">Ubicación / Lugar</th>
-                                <th style="width: 6%; text-align: center;">PAX</th>
+                                <th style="width: 10%; text-align: center;">Fecha</th>
+                                <th style="width: 8%; text-align: center;">Hora</th>
+                                <th style="width: 22%;">Servicio / Responsable</th>
+                                <th style="width: 16%;">Ubicación / Lugar</th>
+                                <th style="width: 5%; text-align: center;">PAX</th>
                                 <th style="width: 33%;">Menú Solicitado</th>
                             </tr>
                         </thead>

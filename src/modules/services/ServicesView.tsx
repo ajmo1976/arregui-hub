@@ -411,8 +411,9 @@ export default function ServicesView() {
                 rows.push(`
                     <tr>
                         <td class="text-center font-bold">#${ev.id}</td>
-                        <td><strong>${ev.title}</strong><br><small class="text-muted">Resp: ${ev.responsible}</small></td>
                         <td class="text-center">-</td>
+                        <td class="text-center">-</td>
+                        <td><strong>${ev.title}</strong><br><small class="text-muted">Resp: ${ev.responsible}</small></td>
                         <td>-</td>
                         <td class="text-center">0</td>
                         <td><span class="no-items">Sin detalles</span></td>
@@ -431,8 +432,9 @@ export default function ServicesView() {
                     rows.push(`
                         <tr>
                             <td class="text-center font-bold">${regId}</td>
+                            <td class="text-center">${dateStr}</td>
+                            <td class="text-center">${timeStr}</td>
                             <td><strong>${ev.title}</strong><br><small class="text-muted">Resp: ${ev.responsible}</small></td>
-                            <td class="text-center">${dateStr}<br>${timeStr}</td>
                             <td>${d.location || 'N/A'}</td>
                             <td class="text-center">${d.attendees || 0}</td>
                             <td class="menu-cell">${itemsText}</td>
@@ -552,10 +554,11 @@ export default function ServicesView() {
                         <thead>
                             <tr>
                                 <th style="width: 6%; text-align: center;">Reg.</th>
-                                <th style="width: 25%;">Servicio / Responsable</th>
-                                <th style="width: 12%; text-align: center;">Fecha y Hora</th>
-                                <th style="width: 18%;">Ubicación / Lugar</th>
-                                <th style="width: 6%; text-align: center;">PAX</th>
+                                <th style="width: 10%; text-align: center;">Fecha</th>
+                                <th style="width: 8%; text-align: center;">Hora</th>
+                                <th style="width: 22%;">Servicio / Responsable</th>
+                                <th style="width: 16%;">Ubicación / Lugar</th>
+                                <th style="width: 5%; text-align: center;">PAX</th>
                                 <th style="width: 33%;">Menú Solicitado</th>
                             </tr>
                         </thead>
