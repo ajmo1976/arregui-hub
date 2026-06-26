@@ -52,7 +52,7 @@ export default function ServicesView() {
     const [editingEvent, setEditingEvent] = useState<any>(null);
     const { user } = useAuthStore();
     const isBasicUser = user?.role_name?.toLowerCase() === 'básico' || user?.role_name?.toLowerCase() === 'basico';
-    const { canShowPrices } = useCurrency();
+    const { canShowPrices, formatPrice } = useCurrency();
 
     // Filtros avanzados
     const [showFilters, setShowFilters] = useState(false);
@@ -916,8 +916,8 @@ export default function ServicesView() {
                                 <td>${item.name}</td>
                                 <td class="text-center">${qty}</td>
                                 <td class="text-center">${unit}</td>
-                                <td class="text-right">$${price.toFixed(2)}</td>
-                                <td class="text-right font-bold">$${sub.toFixed(2)}</td>
+                                <td class="text-right">${formatPrice(price)}</td>
+                                <td class="text-right font-bold">${formatPrice(sub)}</td>
                             </tr>
                         `;
                     }).join('')
@@ -955,7 +955,7 @@ export default function ServicesView() {
                                 ${itemsRows}
                                 <tr class="detail-total-row">
                                     <td colspan="4" class="text-right font-bold">Subtotal Servicio:</td>
-                                    <td class="text-right font-bold">$${detailTotal.toFixed(2)}</td>
+                                    <td class="text-right font-bold">${formatPrice(detailTotal)}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1036,7 +1036,7 @@ export default function ServicesView() {
 
                     <div class="grand-total-box">
                         <span class="grand-total-label">${event.status === 'Facturado' ? 'Total Facturado' : (event.status === 'Cobrado' ? 'Total Cobrado' : 'Total a Facturar')} Servicio #${event.id}:</span>
-                        <span class="grand-total-value">$${eventTotal.toFixed(2)}</span>
+                        <span class="grand-total-value">${formatPrice(eventTotal)}</span>
                     </div>
 
                     <div class="footer">
@@ -1487,7 +1487,7 @@ export default function ServicesView() {
                                                     {canShowPrices && (
                                                         <td className="px-8 py-6">
                                                             <span className="font-black text-gray-900 dark:text-white text-lg">
-                                                                ${ev.details?.reduce((acc: number, d: any) => acc + d.estimated_amount, 0).toFixed(2) || '0.00'}
+                                                                {formatPrice(ev.details?.reduce((acc: number, d: any) => acc + d.estimated_amount, 0) || 0)}
                                                             </span>
                                                         </td>
                                                     )}

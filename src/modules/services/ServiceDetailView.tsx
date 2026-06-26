@@ -304,8 +304,8 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                             <td>${item.name}</td>
                             <td class="text-center">${qty}</td>
                             <td class="text-center">${unit}</td>
-                            <td class="text-right">$${price.toFixed(2)}</td>
-                            <td class="text-right font-bold">$${sub.toFixed(2)}</td>
+                            <td class="text-right">${formatPrice(price)}</td>
+                            <td class="text-right font-bold">${formatPrice(sub)}</td>
                         </tr>
                     `;
                 }).join('')
@@ -343,7 +343,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                             ${itemsRows}
                             <tr class="detail-total-row">
                                 <td colspan="4" class="text-right font-bold">Subtotal Servicio:</td>
-                                <td class="text-right font-bold">$${detailTotal.toFixed(2)}</td>
+                                <td class="text-right font-bold">${formatPrice(detailTotal)}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -677,7 +677,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
 
                     <div class="grand-total-box">
                         <span class="grand-total-label">${event.status === 'Facturado' ? 'Total Facturado' : (event.status === 'Cobrado' ? 'Total Cobrado' : 'Total a Facturar')} Servicio #${event.id}:</span>
-                        <span class="grand-total-value">$${grandTotal.toFixed(2)}</span>
+                        <span class="grand-total-value">${formatPrice(grandTotal)}</span>
                     </div>
 
                     <div class="footer">
