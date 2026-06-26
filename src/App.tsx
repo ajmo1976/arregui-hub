@@ -118,7 +118,7 @@ export default function App() {
 
     const allModules = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'bg-[#43a047]' },
-        { id: 'events', label: 'Eventos', icon: Calendar, color: 'bg-[#42a5f5]' },
+        { id: 'events', label: 'Calendario', icon: Calendar, color: 'bg-[#42a5f5]' },
         { id: 'catering', label: 'Servicios', icon: UtensilsCrossed, color: 'bg-[#f06292]' },
         { id: 'inventory', label: 'Inventario', icon: Package, color: 'bg-[#fbc02d]' },
         { id: 'logs', label: 'Registros', icon: ClipboardList, color: 'bg-[#7986cb]' },

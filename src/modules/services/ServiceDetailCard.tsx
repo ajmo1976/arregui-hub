@@ -39,8 +39,47 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
                     inventoryApi.getCateringItems(),
                     inventoryApi.getCateringCategories()
                 ]);
-                setProducts(itemRes.data || []);
+                const fetchedProducts = itemRes.data || [];
+                setProducts(fetchedProducts);
                 setCategories(catRes.data || []);
+
+                // Auto-inject the service cost item if not present in selected_items
+                const serviceCostItem = fetchedProducts.find((p: any) => p.sku === 'SERV-001' || p.name?.trim() === 'Servicio');
+                if (serviceCostItem) {
+                    const currentItems = data.selected_items || [];
+                    const hasServiceCost = currentItems.some((item: any) => item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || item.id === serviceCostItem.id);
+                    if (!hasServiceCost) {
+                        const newItem = {
+                            id: serviceCostItem.id,
+                            name: serviceCostItem.name,
+                            sku: serviceCostItem.sku,
+                            price: serviceCostItem.price,
+                            quantity: 1,
+                            unit: 'Unidad',
+                            is_sold_by_case: serviceCostItem.is_sold_by_case,
+                            units_per_case: serviceCostItem.units_per_case || 1
+                        };
+                        const updatedItems = [...currentItems, newItem];
+                        
+                        // Recalculate immediately with fetchedProducts
+                        const itemsTotal = updatedItems.reduce((acc: number, item: any) => {
+                            const catalogItem = fetchedProducts.find((p: any) => String(p.id) === String(item.id));
+                            const price = item.price || 0;
+                            const isItemService = item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || (catalogItem && (catalogItem.sku === 'SERV-001' || catalogItem.name?.trim() === 'Servicio'));
+                            const quantity = isItemService ? 1 : (item.quantity || 1);
+                            const byCase = catalogItem ? catalogItem.is_sold_by_case : item.is_sold_by_case;
+                            const units = catalogItem ? catalogItem.units_per_case : (item.units_per_case || 1);
+                            const multiplier = (item.unit === 'Caja' && byCase) ? units : 1;
+                            return acc + (price * quantity * multiplier);
+                        }, 0);
+
+                        onChange({
+                            ...data,
+                            selected_items: updatedItems,
+                            estimated_amount: parseFloat(itemsTotal.toFixed(2))
+                        });
+                    }
+                }
             } catch (err) {
                 console.error("Error loading catering menu data", err);
             }
@@ -49,6 +88,9 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
     }, []);
 
     const toggleItem = (product: any) => {
+        const isServiceCost = product.sku === 'SERV-001' || product.name?.trim() === 'Servicio';
+        if (isServiceCost) return; // Cannot toggle service cost manually
+
         const currentItems = data.selected_items || [];
         const exists = currentItems.find((p: any) => p.id === product.id);
 
@@ -59,6 +101,7 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
             newItems = [...currentItems, {
                 id: product.id,
                 name: product.name,
+                sku: product.sku,
                 price: product.price,
                 quantity: data.attendees || 1,
                 unit: product.is_sold_by_case ? 'Caja' : 'Unidad',
@@ -72,6 +115,8 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
 
     const updateItemQuantity = (productId: number, quantity: number) => {
         const catalogItem = products.find(p => String(p.id) === String(productId));
+        if (catalogItem?.sku === 'SERV-001' || catalogItem?.name?.trim() === 'Servicio') return; // Fixed at 1
+
         const newItems = (data.selected_items || []).map((item: any) =>
             String(item.id) === String(productId) ? {
                 ...item,
@@ -85,6 +130,8 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
 
     const updateItemUnit = (productId: number, unit: string) => {
         const catalogItem = products.find(p => String(p.id) === String(productId));
+        if (catalogItem?.sku === 'SERV-001' || catalogItem?.name?.trim() === 'Servicio') return; // Fixed to Unidad
+
         const newItems = (data.selected_items || []).map((item: any) =>
             String(item.id) === String(productId) ? {
                 ...item,
@@ -100,7 +147,8 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
         const itemsTotal = items.reduce((acc: number, item: any) => {
             const catalogItem = products.find(p => String(p.id) === String(item.id));
             const price = item.price || 0;
-            const quantity = item.quantity || 1;
+            const isItemService = item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || (catalogItem && (catalogItem.sku === 'SERV-001' || catalogItem.name?.trim() === 'Servicio'));
+            const quantity = isItemService ? 1 : (item.quantity || 1);
 
             // Prioritize catalog config or item backup
             const byCase = catalogItem ? catalogItem.is_sold_by_case : item.is_sold_by_case;
@@ -110,9 +158,19 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
 
             return acc + (price * quantity * multiplier);
         }, 0);
+
+        const mappedItems = items.map((item: any) => {
+            const catalogItem = products.find(p => String(p.id) === String(item.id));
+            const isItemService = item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || (catalogItem && (catalogItem.sku === 'SERV-001' || catalogItem.name?.trim() === 'Servicio'));
+            if (isItemService && item.quantity !== 1) {
+                return { ...item, quantity: 1 };
+            }
+            return item;
+        });
+
         onChange({
             ...data,
-            selected_items: items,
+            selected_items: mappedItems,
             attendees: attendees,
             estimated_amount: parseFloat(itemsTotal.toFixed(2))
         });
@@ -124,10 +182,17 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
 
         // Si la cantidad del item es 1 o era igual al número previo de asistentes, 
         // lo sincronizamos con el nuevo número.
-        const newItems = (data.selected_items || []).map((item: any) => ({
-            ...item,
-            quantity: (item.quantity === prevAttendees || item.quantity === 1) ? attendees : item.quantity
-        }));
+        const newItems = (data.selected_items || []).map((item: any) => {
+            const catalogItem = products.find(p => String(p.id) === String(item.id));
+            const isItemService = item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || (catalogItem && (catalogItem.sku === 'SERV-001' || catalogItem.name?.trim() === 'Servicio'));
+            if (isItemService) {
+                return { ...item, quantity: 1 };
+            }
+            return {
+                ...item,
+                quantity: (item.quantity === prevAttendees || item.quantity === 1) ? attendees : item.quantity
+            };
+        });
 
         recalculateTotal(newItems, attendees);
     };
@@ -260,6 +325,7 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
                                     const selectedItem = data.selected_items?.find((item: any) => item.id === p.id);
                                     const isSelected = !!selectedItem;
                                     const isBeverage = categories.find(c => c.id === p.category_id)?.name.toLowerCase().includes('bebida');
+                                    const isServiceCost = p.sku === 'SERV-001' || p.name?.trim() === 'Servicio';
 
                                     return (
                                         <div
@@ -271,8 +337,8 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
                                         >
                                             <div className="flex items-center justify-between">
                                                 <button
-                                                    onClick={() => toggleItem(p)}
-                                                    className="flex flex-1 items-center gap-3 text-left group"
+                                                    onClick={() => !isServiceCost && toggleItem(p)}
+                                                    className={`flex flex-1 items-center gap-3 text-left group ${isServiceCost ? 'cursor-default pointer-events-none' : ''}`}
                                                 >
                                                     <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected
                                                         ? 'bg-primary border-primary'
@@ -293,6 +359,11 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
                                                                     <Package size={8} /> CAJA X {p.units_per_case}
                                                                 </span>
                                                             )}
+                                                            {isServiceCost && (
+                                                                <span className="text-[9px] font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                                                    OBLIGATORIO
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </button>
@@ -300,28 +371,34 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
 
                                             {isSelected && (
                                                 <div className="flex flex-wrap items-center gap-3 pl-9 pb-1">
-                                                    <div className="flex items-center bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-700 rounded-xl p-1 shadow-sm">
-                                                        <button
-                                                            onClick={() => updateItemQuantity(p.id, (selectedItem.quantity || 1) - 1)}
-                                                            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
-                                                        >
-                                                            <Minus size={14} />
-                                                        </button>
-                                                        <input
-                                                            type="number"
-                                                            value={selectedItem.quantity || 1}
-                                                            onChange={(e) => updateItemQuantity(p.id, parseInt(e.target.value) || 1)}
-                                                            className="w-12 text-center bg-transparent border-none outline-none font-black text-xs text-gray-900 dark:text-white"
-                                                        />
-                                                        <button
-                                                            onClick={() => updateItemQuantity(p.id, (selectedItem.quantity || 1) + 1)}
-                                                            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
-                                                        >
-                                                            <Plus size={14} />
-                                                        </button>
-                                                    </div>
+                                                    {isServiceCost ? (
+                                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-lg">
+                                                            Costo de servicio obligatorio
+                                                        </span>
+                                                    ) : (
+                                                        <div className="flex items-center bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-700 rounded-xl p-1 shadow-sm">
+                                                            <button
+                                                                onClick={() => updateItemQuantity(p.id, (selectedItem.quantity || 1) - 1)}
+                                                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                                                            >
+                                                                <Minus size={14} />
+                                                            </button>
+                                                            <input
+                                                                type="number"
+                                                                value={selectedItem.quantity || 1}
+                                                                onChange={(e) => updateItemQuantity(p.id, parseInt(e.target.value) || 1)}
+                                                                className="w-12 text-center bg-transparent border-none outline-none font-black text-xs text-gray-900 dark:text-white"
+                                                            />
+                                                            <button
+                                                                onClick={() => updateItemQuantity(p.id, (selectedItem.quantity || 1) + 1)}
+                                                                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                                                            >
+                                                                <Plus size={14} />
+                                                            </button>
+                                                        </div>
+                                                    )}
 
-                                                    {(isBeverage || p.is_sold_by_case) && (
+                                                    {(isBeverage || p.is_sold_by_case) && !isServiceCost && (
                                                         <div className="relative">
                                                             <select
                                                                 value={selectedItem.unit || 'Unidad'}

@@ -31,6 +31,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 import ServiceDetailView from './ServiceDetailView';
+import { useAuthStore } from '../../hooks/useAuth';
 
 // Helper to parse date string neutrally into a local midnight Date object
 const parseNeutralDate = (dateStr: string) => {
@@ -100,6 +101,16 @@ const getStatusColors = (status: string) => {
                 solidBg: 'bg-emerald-600 dark:bg-emerald-500',
                 glow: 'shadow-emerald-500/20'
             };
+        case 'Cobrado':
+            return {
+                bg: 'bg-purple-50 dark:bg-purple-900/20',
+                border: 'border-purple-100 hover:border-purple-300 dark:border-purple-800/40 dark:hover:border-purple-700',
+                text: 'text-purple-700 dark:text-purple-300',
+                dot: 'bg-purple-500 dark:bg-purple-400',
+                badgeBg: 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800',
+                solidBg: 'bg-purple-600 dark:bg-purple-500',
+                glow: 'shadow-purple-500/20'
+            };
         case 'Cancelado':
             return {
                 bg: 'bg-red-50 dark:bg-red-900/20',
@@ -125,6 +136,8 @@ const getStatusColors = (status: string) => {
 };
 
 export default function ServicesCalendar() {
+    const { user } = useAuthStore();
+    const isBasicUser = user?.role_name?.toLowerCase() === 'básico' || user?.role_name?.toLowerCase() === 'basico';
     const [currentDate, setCurrentDate] = useState(new Date());
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -234,13 +247,15 @@ export default function ServicesCalendar() {
                             Visualización cronológica de todas las solicitudes de catering y eventos programados.
                         </p>
                     </div>
-                    <button
-                        onClick={() => window.print()}
-                        className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-all shadow-sm"
-                    >
-                        <Printer size={18} />
-                        Imprimir Reporte
-                    </button>
+                    {!isBasicUser && (
+                        <button
+                            onClick={() => window.print()}
+                            className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-all shadow-sm"
+                        >
+                            <Printer size={18} />
+                            Imprimir Reporte
+                        </button>
+                    )}
                 </div>
 
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-900 p-2 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">

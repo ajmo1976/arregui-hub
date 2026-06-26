@@ -19,7 +19,7 @@ const AVAILABLE_MODULES = [
     { id: 'inventory', label: 'Inventario', icon: Package },
     { id: 'suppliers', label: 'Proveedores', icon: Truck },
     { id: 'clients', label: 'Clientes y Usuarios', icon: Users },
-    { id: 'events', label: 'Eventos', icon: Calendar },
+    { id: 'events', label: 'Calendario', icon: Calendar },
     { id: 'catering', label: 'Catering', icon: Utensils },
     { id: 'logs', label: 'Bitácora', icon: ScrollText },
     { id: 'settings', label: 'Configuración', icon: Settings },

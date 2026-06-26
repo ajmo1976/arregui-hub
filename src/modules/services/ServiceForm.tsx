@@ -9,7 +9,8 @@ import {
     Save,
     Loader2,
     Briefcase,
-    ClipboardCheck
+    ClipboardCheck,
+    Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -17,7 +18,7 @@ import api, { inventoryApi } from '../../services/api';
 import ServiceDetailCard from './ServiceDetailCard';
 
 interface ServiceFormProps {
-    onClose: () => void;
+    onClose: (updatedEvent?: any) => void;
     initialData?: any;
 }
 
@@ -40,7 +41,12 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
         title: initialData?.title || '',
         responsible: initialData?.responsible || '',
         cost_center: initialData?.cost_center || '',
-        status: initialData?.status || 'Abierto'
+        company: initialData?.company || '',
+        status: initialData?.status || 'Abierto',
+        status_date: initialData?.status_date 
+            ? new Date(initialData.status_date).toISOString().split('T')[0] 
+            : new Date().toISOString().split('T')[0],
+        invoice_number: initialData?.invoice_number || ''
     });
     const [details, setDetails] = useState<any[]>(
         initialData?.details?.map((d: any) => ({
@@ -92,8 +98,8 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!eventData.title || !eventData.responsible || !eventData.cost_center) {
-            toast.error('Por favor completa los campos principales del evento');
+        if (!eventData.title || !eventData.responsible) {
+            toast.error('Por favor completa los campos principales del evento (Título y Responsable)');
             return;
         }
 
@@ -101,6 +107,7 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
         try {
             const payload = {
                 ...eventData,
+                status_date: eventData.status_date ? new Date(eventData.status_date).toISOString() : new Date().toISOString(),
                 details: details.map(d => ({
                     ...d,
                     service_date: new Date(d.service_date).toISOString()
@@ -108,13 +115,14 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
             };
 
             if (isEdit) {
-                await inventoryApi.updateServiceEvent(initialData.id, payload);
+                const res = await inventoryApi.updateServiceEvent(initialData.id, payload);
                 toast.success('Evento y servicios actualizados exitosamente');
+                onClose(res.data);
             } else {
-                await inventoryApi.createServiceEvent(payload);
+                const res = await inventoryApi.createServiceEvent(payload);
                 toast.success('Evento y servicios creados exitosamente');
+                onClose(res.data);
             }
-            onClose();
         } catch (err: any) {
             toast.error(err.response?.data?.detail || `Error al ${isEdit ? 'actualizar' : 'crear'} el servicio`);
         } finally {
@@ -186,7 +194,20 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Centro de Costo *</label>
+                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Empresa</label>
+                            <div className="relative group">
+                                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Ej. Acme Corp"
+                                    className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                    value={eventData.company}
+                                    onChange={e => setEventData({ ...eventData, company: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Centro de Costo</label>
                             <div className="relative group">
                                 <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
                                 <input
@@ -198,7 +219,7 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                                 />
                             </div>
                         </div>
-                        <div className="space-y-2 lg:col-span-2">
+                        <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Fecha de Solicitud</label>
                             <div className="relative">
                                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
@@ -206,23 +227,61 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                                     type="date"
                                     readOnly
                                     className="w-full pl-11 pr-4 py-3.5 bg-gray-100/50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl font-medium outline-none cursor-not-allowed"
-                                    value={new Date().toISOString().split('T')[0]}
+                                    value={initialData?.request_date ? new Date(initialData.request_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
                                 />
                             </div>
                         </div>
-                        <div className="space-y-2 lg:col-span-2">
+                        <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1 text-right">Estado General</label>
                             <div className="relative">
                                 <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                                 <select
                                     className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium appearance-none"
                                     value={eventData.status}
-                                    onChange={e => setEventData({ ...eventData, status: e.target.value })}
+                                    onChange={e => setEventData({ 
+                                        ...eventData, 
+                                        status: e.target.value,
+                                        status_date: new Date().toISOString().split('T')[0]
+                                    })}
                                 >
                                     {eventStatuses.map(es => (
                                         <option key={es.id} value={es.value}>{es.name}</option>
                                     ))}
                                 </select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Fecha de Estado</label>
+                            <div className="relative">
+                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                                <input
+                                    type="date"
+                                    readOnly
+                                    className="w-full pl-11 pr-4 py-3.5 bg-gray-100/50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl font-medium outline-none cursor-not-allowed"
+                                    value={eventData.status_date}
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2 lg:col-span-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Número de Factura</label>
+                            <div className="relative group">
+                                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder={
+                                        (eventData.status === 'Facturado' || eventData.status === 'Cobrado')
+                                            ? "Ej. FAC-00123"
+                                            : "Se habilita al cambiar a Facturado/Cobrado"
+                                    }
+                                    disabled={eventData.status !== 'Facturado' && eventData.status !== 'Cobrado'}
+                                    className={`w-full pl-11 pr-4 py-3.5 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium ${
+                                        (eventData.status === 'Facturado' || eventData.status === 'Cobrado')
+                                            ? "bg-white dark:bg-gray-900 focus:bg-white"
+                                            : "bg-gray-100/50 dark:bg-gray-800 cursor-not-allowed text-gray-400"
+                                    }`}
+                                    value={eventData.invoice_number || ''}
+                                    onChange={e => setEventData({ ...eventData, invoice_number: e.target.value })}
+                                />
                             </div>
                         </div>
                     </div>

@@ -14,7 +14,8 @@ import {
     Printer,
     Edit3,
     Hash,
-    Briefcase
+    Briefcase,
+    Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../hooks/useAuth';
@@ -66,6 +67,7 @@ interface Props {
 export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
     const { user } = useAuthStore();
     const { formatPrice, canShowPrices } = useCurrency();
+    const isBasicUser = user?.role_name?.toLowerCase() === 'básico' || user?.role_name?.toLowerCase() === 'basico';
     if (!event) return null;
 
     const isOwner = user?.is_superuser || Number(event.created_by?.id || event.created_by) === Number(user?.id) || event.responsible === user?.full_name;
@@ -119,6 +121,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                     
                     <div class="section">
                         <div class="content"><span class="label">Evento:</span> ${event.title}</div>
+                        <div class="content"><span class="label">Empresa:</span> ${event.company || 'N/A'}</div>
                         <div class="content"><span class="label">C. Costo:</span> ${event.cost_center || 'N/A'}</div>
                         <div class="content"><span class="label">Fecha:</span> ${dateStr}</div>
                         <div class="content"><span class="label">Hora:</span> ${detail.service_time}</div>
@@ -218,6 +221,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                     </div>
                     <div class="section">
                         <div class="content"><span class="label">Evento:</span> ${event.title}</div>
+                        <div class="content"><span class="label">Empresa:</span> ${event.company || 'N/A'}</div>
                         <div class="content"><span class="label">C. Costo:</span> ${event.cost_center || 'N/A'}</div>
                         <div class="content"><span class="label">Servicio:</span> ${index + 1} de ${event.details.length}</div>
                         <div class="content"><span class="label">Fecha:</span> ${dateStr}</div>
@@ -257,6 +261,435 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
         printWindow.document.close();
     };
 
+    const handlePrintInvoicingReport = () => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const nowStr = new Date().toLocaleString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const requestDateStr = event.request_date 
+            ? new Date(event.request_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            : 'N/A';
+
+        const statusDateStr = event.status_date 
+            ? new Date(event.status_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            : requestDateStr;
+
+        let detailsHtml = '';
+        let grandTotal = 0;
+
+        const details = event.details || [];
+        details.forEach((d: any, idx: number) => {
+            const dateStr = formatNeutralDate(d.service_date);
+            const timeStr = d.service_time || '';
+            const detailId = details.length > 1 ? `#${event.id}.${idx + 1}` : `#${event.id}`;
+            const detailTotal = d.estimated_amount || 0;
+            grandTotal += detailTotal;
+
+            const itemsRows = d.selected_items && d.selected_items.length > 0
+                ? d.selected_items.map((item: any) => {
+                    const qty = item.quantity || 1;
+                    const price = item.price || 0;
+                    const unit = item.unit || 'Unidad';
+                    const mult = (unit === 'Caja' && item.is_sold_by_case) ? (item.units_per_case || 1) : 1;
+                    const sub = qty * price * mult;
+                    return `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td class="text-center">${qty}</td>
+                            <td class="text-center">${unit}</td>
+                            <td class="text-right">$${price.toFixed(2)}</td>
+                            <td class="text-right font-bold">$${sub.toFixed(2)}</td>
+                        </tr>
+                    `;
+                }).join('')
+                : `
+                    <tr>
+                        <td colspan="5" class="text-center italic no-items">Sin platos/snack registrados en este servicio</td>
+                    </tr>
+                `;
+
+            detailsHtml += `
+                <div class="detail-section">
+                    <div class="detail-header">
+                        <h2>${details.length > 1 ? `Servicio ${idx + 1} de ${details.length} (Reg. ${detailId})` : 'Detalle del Servicio'}</h2>
+                    </div>
+                    <table class="detail-meta-table">
+                        <tr>
+                            <td style="width: 25%;"><span class="meta-label">Fecha</span><span class="meta-value">${dateStr}</span></td>
+                            <td style="width: 25%;"><span class="meta-label">Hora</span><span class="meta-value">${timeStr}</span></td>
+                            <td style="width: 25%;"><span class="meta-label">Sala/Ubicación</span><span class="meta-value">${d.location || 'N/A'}</span></td>
+                            <td style="width: 25%;"><span class="meta-label">PAX</span><span class="meta-value">${d.attendees || 0} personas</span></td>
+                        </tr>
+                    </table>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Descripción del Ítem</th>
+                                <th class="text-center" style="width: 10%;">Cant.</th>
+                                <th class="text-center" style="width: 12%;">Unidad</th>
+                                <th class="text-right" style="width: 15%;">P. Unitario</th>
+                                <th class="text-right" style="width: 18%;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsRows}
+                            <tr class="detail-total-row">
+                                <td colspan="4" class="text-right font-bold">Subtotal Servicio:</td>
+                                <td class="text-right font-bold">$${detailTotal.toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    ${d.additional_requirements ? `
+                    <div class="requirements-box">
+                        <strong>Requerimientos Especiales / Logística:</strong>
+                        <p>${d.additional_requirements}</p>
+                    </div>` : ''}
+                    
+                    ${d.observations ? `
+                    <div class="observations-box">
+                        <strong>Observaciones:</strong>
+                        <p>${d.observations}</p>
+                    </div>` : ''}
+                </div>
+            `;
+        });
+
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Reporte de Facturación - Servicio #${event.id}</title>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;850;900&display=swap');
+                        @page {
+                            size: portrait;
+                            margin: 15mm;
+                        }
+                        body {
+                            font-family: 'Inter', sans-serif;
+                            color: #1f2937;
+                            line-height: 1.4;
+                            padding: 0;
+                            margin: 0;
+                            font-size: 11px;
+                            background-color: #fff;
+                        }
+                        .header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-start;
+                            border-bottom: 2px solid #10b981;
+                            padding-bottom: 12px;
+                            margin-bottom: 20px;
+                        }
+                        .company-info h1 {
+                            font-size: 20px;
+                            font-weight: 900;
+                            margin: 0;
+                            color: #10b981;
+                            text-transform: uppercase;
+                            letter-spacing: -0.02em;
+                        }
+                        .company-info p {
+                            margin: 2px 0 0 0;
+                            font-size: 10px;
+                            color: #6b7280;
+                            font-weight: 500;
+                        }
+                        .invoice-title {
+                            text-align: right;
+                        }
+                        .invoice-title h2 {
+                            font-size: 18px;
+                            font-weight: 900;
+                            margin: 0;
+                            color: #111827;
+                            text-transform: uppercase;
+                        }
+                        .invoice-title p {
+                            margin: 2px 0 0 0;
+                            font-size: 11px;
+                            color: #374151;
+                            font-weight: 700;
+                        }
+                        .metadata-table {
+                            width: 100%;
+                            border-collapse: separate;
+                            border-spacing: 0;
+                            background-color: #f9fafb;
+                            border: 1px solid #e5e7eb;
+                            border-radius: 12px;
+                            margin-bottom: 25px;
+                            overflow: hidden;
+                        }
+                        .metadata-col {
+                            vertical-align: top;
+                        }
+                        .metadata-group-title {
+                            font-size: 10px;
+                            font-weight: 900;
+                            color: #10b981;
+                            text-transform: uppercase;
+                            letter-spacing: 0.05em;
+                            margin-bottom: 12px;
+                            border-bottom: 1px solid #f3f4f6;
+                            padding-bottom: 6px;
+                        }
+                        .metadata-item {
+                            margin-bottom: 10px;
+                        }
+                        .metadata-item:last-child {
+                            margin-bottom: 0;
+                        }
+                        .metadata-label {
+                            display: block;
+                            font-size: 8px;
+                            font-weight: 800;
+                            text-transform: uppercase;
+                            color: #9ca3af;
+                            letter-spacing: 0.05em;
+                            margin-bottom: 2px;
+                        }
+                        .metadata-value {
+                            display: block;
+                            font-size: 12px;
+                            font-weight: 700;
+                            color: #1f2937;
+                        }
+                        .detail-section {
+                            margin-bottom: 30px;
+                            page-break-inside: avoid;
+                        }
+                        .detail-header {
+                            border-bottom: 1px solid #e5e7eb;
+                            padding-bottom: 6px;
+                            margin-bottom: 10px;
+                        }
+                        .detail-header h2 {
+                            font-size: 13px;
+                            font-weight: 850;
+                            margin: 0;
+                            color: #1f2937;
+                            text-transform: uppercase;
+                        }
+                        .detail-meta-table {
+                            width: 100%;
+                            border-collapse: separate;
+                            border-spacing: 0;
+                            background-color: #f3f4f6;
+                            border-radius: 8px;
+                            margin-bottom: 12px;
+                        }
+                        .detail-meta-table td {
+                            padding: 8px 12px;
+                            border: none;
+                            vertical-align: middle;
+                        }
+                        .detail-meta-table td:not(:last-child) {
+                            border-right: 1px solid #e5e7eb;
+                        }
+                        .detail-meta-table .meta-label {
+                            display: block;
+                            font-size: 8px;
+                            font-weight: 800;
+                            text-transform: uppercase;
+                            color: #6b7280;
+                            letter-spacing: 0.05em;
+                            margin-bottom: 2px;
+                        }
+                        .detail-meta-table .meta-value {
+                            display: block;
+                            font-size: 11px;
+                            font-weight: 700;
+                            color: #1f2937;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 10px;
+                        }
+                        th {
+                            background-color: #f9fafb;
+                            color: #4b5563;
+                            font-weight: 800;
+                            text-transform: uppercase;
+                            font-size: 9px;
+                            letter-spacing: 0.05em;
+                            border-bottom: 1.5px solid #e5e7eb;
+                            padding: 6px 8px;
+                            text-align: left;
+                        }
+                        td {
+                            border-bottom: 1px solid #e5e7eb;
+                            padding: 6px 8px;
+                            font-size: 11px;
+                        }
+                        .text-center { text-align: center; }
+                        .text-right { text-align: right; }
+                        .font-bold { font-weight: 700; }
+                        .no-items {
+                            color: #9ca3af;
+                        }
+                        .detail-total-row {
+                            background-color: #f9fafb;
+                        }
+                        .detail-total-row td {
+                            border-top: 1.5px solid #e5e7eb;
+                            border-bottom: none;
+                            padding: 8px;
+                            font-size: 11px;
+                        }
+                        .requirements-box, .observations-box {
+                            background-color: #fafafa;
+                            border-left: 3px solid #d1d5db;
+                            padding: 6px 12px;
+                            margin-top: 8px;
+                            border-radius: 0 6px 6px 0;
+                            font-size: 10px;
+                        }
+                        .requirements-box strong, .observations-box strong {
+                            display: block;
+                            color: #4b5563;
+                            margin-bottom: 2px;
+                        }
+                        .requirements-box p, .observations-box p {
+                            margin: 0;
+                            color: #6b7280;
+                        }
+                        .grand-total-box {
+                            margin-top: 30px;
+                            background-color: #f0fdf4;
+                            border: 2px solid #10b981;
+                            border-radius: 12px;
+                            padding: 15px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            page-break-inside: avoid;
+                        }
+                        .grand-total-label {
+                            font-size: 13px;
+                            font-weight: 900;
+                            color: #065f46;
+                            text-transform: uppercase;
+                            letter-spacing: 0.05em;
+                        }
+                        .grand-total-value {
+                            font-size: 22px;
+                            font-weight: 900;
+                            color: #047857;
+                            border-bottom: 3px double #10b981;
+                        }
+                        .footer {
+                            margin-top: 40px;
+                            border-top: 1px solid #e5e7eb;
+                            padding-top: 12px;
+                            text-align: center;
+                            font-size: 9px;
+                            color: #9ca3af;
+                            font-weight: 500;
+                        }
+                        @media print {
+                            .no-print { display: none; }
+                        }
+                        .no-print-btn {
+                            background-color: #10b981;
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            font-size: 11px;
+                            font-weight: bold;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            margin-left: 10px;
+                            transition: background-color 0.2s;
+                        }
+                        .no-print-btn:hover {
+                            background-color: #059669;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="company-info">
+                            <h1>Arregui Catering</h1>
+                            <p>Servicios de Alimentación y Eventos Premium</p>
+                        </div>
+                        <div class="invoice-title">
+                            <h2>Reporte de Facturación</h2>
+                            <p>Servicio Nº #${event.id}${event.invoice_number ? ` | Factura: ${event.invoice_number}` : ''}</p>
+                        </div>
+                    </div>
+
+                    <table class="metadata-table">
+                        <tr>
+                            <td class="metadata-col" style="width: 50%; border-right: 1px solid #e5e7eb; padding: 15px;">
+                                <div class="metadata-group-title">Datos del Servicio</div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Título del Servicio</span>
+                                    <span class="metadata-value">${event.title}</span>
+                                </div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Responsable</span>
+                                    <span class="metadata-value">${event.responsible}</span>
+                                </div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Gestor / Solicitante</span>
+                                    <span class="metadata-value">${event.gestor || 'ArreguiHub'}</span>
+                                </div>
+                            </td>
+                            <td class="metadata-col" style="width: 50%; padding: 15px;">
+                                <div class="metadata-group-title">Información de Facturación</div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Empresa / Cliente</span>
+                                    <span class="metadata-value">${event.company || 'NO ESPECIFICADA'}</span>
+                                </div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Centro de Costo</span>
+                                    <span class="metadata-value">${event.cost_center || 'NO ESPECIFICADO'}</span>
+                                </div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Fecha de Solicitud</span>
+                                    <span class="metadata-value">${requestDateStr}</span>
+                                </div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">${event.status === 'Facturado' ? 'Fecha de Facturación' : (event.status === 'Cobrado' ? 'Fecha de Cobro' : 'Fecha de Estado')}</span>
+                                    <span class="metadata-value">${statusDateStr}</span>
+                                </div>
+                                ${event.invoice_number ? `
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Nº de Factura</span>
+                                    <span class="metadata-value" style="font-weight: bold; color: #6d28d9;">${event.invoice_number}</span>
+                                </div>` : ''}
+                            </td>
+                        </tr>
+                    </table>
+
+                    ${detailsHtml}
+
+                    <div class="grand-total-box">
+                        <span class="grand-total-label">${event.status === 'Facturado' ? 'Total Facturado' : (event.status === 'Cobrado' ? 'Total Cobrado' : 'Total a Facturar')} Servicio #${event.id}:</span>
+                        <span class="grand-total-value">$${grandTotal.toFixed(2)}</span>
+                    </div>
+
+                    <div class="footer">
+                        Generado por ArreguiHub el ${nowStr}
+                        <button class="no-print no-print-btn" onclick="window.print()">Imprimir Reporte</button>
+                    </div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
     return (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 md:p-8">
             <motion.div
@@ -289,9 +722,11 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                             ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-800'
                                             : event.status === 'Facturado'
                                                 ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800'
-                                                : event.status === 'Cancelado'
-                                                    ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:border-red-800'
-                                                    : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:border-gray-600'
+                                                : event.status === 'Cobrado'
+                                                    ? 'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/20 dark:border-purple-800'
+                                                    : event.status === 'Cancelado'
+                                                        ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:border-red-800'
+                                                        : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:border-gray-600'
                                     }`}>
                                     {event.status}
                                 </span>
@@ -326,6 +761,30 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                         <span className="text-[13px] font-bold text-gray-700 dark:text-gray-300 leading-none">{event.cost_center || 'NO ESPECIFICADO'}</span>
                                     </div>
                                 </div>
+                                <div className="hidden sm:block w-px h-8 bg-gray-100 dark:bg-gray-700" />
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500">
+                                        <Building2 size={14} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Empresa</span>
+                                        <span className="text-[13px] font-bold text-gray-700 dark:text-gray-300 leading-none">{event.company || 'NO ESPECIFICADA'}</span>
+                                    </div>
+                                </div>
+                                {event.invoice_number && (
+                                    <>
+                                        <div className="hidden sm:block w-px h-8 bg-gray-100 dark:bg-gray-700" />
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-500">
+                                                <Hash size={14} />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Nº Factura</span>
+                                                <span className="text-[13px] font-bold text-gray-700 dark:text-gray-300 leading-none">{event.invoice_number}</span>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -339,7 +798,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                 <span className="text-sm">Editar</span>
                             </button>
                         )}
-                        {event.details?.length > 1 && (
+                        {!isBasicUser && event.details?.length > 1 && (
                             <button
                                 onClick={handlePrintAll}
                                 className="group flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-900 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 rounded-2xl font-black transition-all active:scale-95 shadow-sm"
@@ -347,6 +806,16 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                             >
                                 <Printer size={18} strokeWidth={2.5} />
                                 <span className="text-xs uppercase tracking-tighter">x{event.details.length}</span>
+                            </button>
+                        )}
+                        {!isBasicUser && canShowPrices && (
+                            <button
+                                onClick={handlePrintInvoicingReport}
+                                className="group flex items-center gap-2 px-6 py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
+                                title="Imprimir Reporte de Facturación"
+                            >
+                                <Printer size={18} className="text-emerald-500" />
+                                <span className="text-sm">Imprimir Facturación</span>
                             </button>
                         )}
                         <div className="w-px h-8 bg-gray-100 dark:bg-gray-700 mx-1" />
@@ -457,16 +926,18 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                                         <span className="text-xl font-black text-primary">{formatPrice(detail.estimated_amount)}</span>
                                                     </div>
                                                 )}
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handlePrint(detail);
-                                                    }}
-                                                    className="p-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl text-gray-400 hover:text-primary hover:border-primary/30 transition-all active:scale-95 shadow-sm"
-                                                    title="Imprimir Comanda"
-                                                >
-                                                    <Printer size={20} />
-                                                </button>
+                                                {!isBasicUser && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handlePrint(detail);
+                                                        }}
+                                                        className="p-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl text-gray-400 hover:text-primary hover:border-primary/30 transition-all active:scale-95 shadow-sm"
+                                                        title="Imprimir Comanda"
+                                                    >
+                                                        <Printer size={20} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
 
@@ -549,11 +1020,23 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
 
                 {/* Footer Portal Actions */}
                 <div className="p-8 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-4">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Creado el</span>
-                        <span className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">
-                            {new Date(event.request_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
-                        </span>
+                    <div className="flex gap-8">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Creado el</span>
+                            <span className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">
+                                {new Date(event.request_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
+                            </span>
+                        </div>
+                        {event.status_date && (
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                    {event.status === 'Facturado' ? 'Facturado el' : (event.status === 'Cobrado' ? 'Cobrado el' : 'Estado modificado el')}
+                                </span>
+                                <span className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">
+                                    {new Date(event.status_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
+                                </span>
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-3">
                         <button
