@@ -1124,6 +1124,39 @@ export default function ServicesView() {
         })
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+    if (showModal || editingEvent) {
+        return (
+            <div className="p-8 max-w-[1600px] mx-auto font-inter animate-in fade-in duration-200">
+                <ServiceForm
+                    initialData={editingEvent}
+                    onClose={(updatedEvent) => {
+                        setShowModal(false);
+                        setEditingEvent(null);
+                        if (updatedEvent && selectedEvent && updatedEvent.id === selectedEvent.id) {
+                            setSelectedEvent(updatedEvent);
+                        }
+                        fetchEvents();
+                    }}
+                />
+            </div>
+        );
+    }
+
+    if (selectedEvent) {
+        return (
+            <div className="p-8 max-w-[1600px] mx-auto font-inter animate-in fade-in duration-200">
+                <ServiceDetailView
+                    event={selectedEvent}
+                    onClose={() => setSelectedEvent(null)}
+                    onEdit={(ev) => {
+                        setSelectedEvent(null);
+                        handleEdit(null as any, ev);
+                    }}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="p-8 max-w-[1600px] mx-auto space-y-8 font-inter">
             {/* Tabs & Main Actions */}
@@ -1532,33 +1565,7 @@ export default function ServicesView() {
                         </div>
                     </div>
 
-                    {/* Modal de Nuevo/Editar Servicio */}
-                    {(showModal || editingEvent) && (
-                        <ServiceForm
-                            initialData={editingEvent}
-                            onClose={(updatedEvent) => {
-                                setShowModal(false);
-                                setEditingEvent(null);
-                                if (updatedEvent && selectedEvent && updatedEvent.id === selectedEvent.id) {
-                                    setSelectedEvent(updatedEvent);
-                                }
-                                fetchEvents();
-                            }}
-                        />
-                    )}
-
-                    <AnimatePresence>
-                        {selectedEvent && (
-                            <ServiceDetailView
-                                event={selectedEvent}
-                                onClose={() => setSelectedEvent(null)}
-                                onEdit={(ev) => {
-                                    setSelectedEvent(null);
-                                    handleEdit(null as any, ev);
-                                }}
-                            />
-                        )}
-                    </AnimatePresence>
+                    {/* early returns handle form and detail views */}
                 </>
             ) : (
                 <MenuManagement />
