@@ -693,21 +693,12 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
     };
 
     return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 md:p-8">
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
-                onClick={onClose}
-            />
-
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-7xl h-[90vh] bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col font-inter"
-            >
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed inset-0 z-[70] bg-gray-50 dark:bg-gray-900 flex flex-col font-inter"
+        >
                 {/* Header */}
                 <div className="p-8 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between relative overflow-hidden flex-shrink-0">
                     <div className="flex items-center gap-4 relative z-10">
@@ -1063,6 +1054,5 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                     </div>
                 </div>
             </motion.div>
-        </div>
     );
 }
