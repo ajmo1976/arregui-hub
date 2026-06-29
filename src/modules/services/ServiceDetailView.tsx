@@ -861,8 +861,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                         </div>
                     </div>
 
-                    {/* Services Workspace */}
-                    <div className="flex-1 flex overflow-hidden min-h-0 bg-white dark:bg-gray-805 rounded-[2rem] border border-gray-150 dark:border-gray-750/50 shadow-sm mx-8 mb-8">
+                    <div className="flex-1 flex overflow-hidden min-h-0 bg-gray-50 dark:bg-gray-900">
                         {/* Sidebar (Left) */}
                         <div className="w-80 border-r border-gray-200 dark:border-gray-800 p-6 flex flex-col gap-3 overflow-y-auto custom-scrollbar flex-shrink-0 bg-white dark:bg-gray-800">
                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Cronograma de Servicios</span>
