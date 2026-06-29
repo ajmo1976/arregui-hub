@@ -207,9 +207,8 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden"
+            className="w-full space-y-8"
         >
-            <div className="p-6 space-y-8">
                 {/* Header with ID and Delete */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -492,7 +491,6 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
                         </div>
                     </div>
                 </div>
-            </div>
         </motion.div>
     );
 }
