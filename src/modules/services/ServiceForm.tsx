@@ -38,7 +38,7 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
         fetchParams();
     }, []);
     const [eventData, setEventData] = useState({
-        title: initialData?.title || '',
+        title: initialData?.title || 'Servicio',
         responsible: initialData?.responsible || '',
         cost_center: initialData?.cost_center || '',
         company: initialData?.company || '',
@@ -51,7 +51,6 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
             ? new Date(initialData.request_date).toISOString().split('T')[0] 
             : new Date().toISOString().split('T')[0]
     });
-    const [isTitleManual, setIsTitleManual] = useState(!!initialData?.title);
     const [details, setDetails] = useState<any[]>(
         initialData?.details?.map((d: any) => ({
             ...d,
@@ -107,10 +106,7 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
             return;
         }
 
-        let finalTitle = eventData.title.trim();
-        if (!finalTitle) {
-            finalTitle = eventData.responsible.trim() ? `Servicio de ${eventData.responsible.trim()}` : 'Servicio';
-        }
+        const finalTitle = eventData.title.trim() || 'Servicio';
 
         setLoading(true);
         try {
@@ -190,14 +186,7 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                                 placeholder="Ej. Conferencia Anual"
                                 className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                                 value={eventData.title}
-                                onChange={e => {
-                                    const val = e.target.value;
-                                    setIsTitleManual(val !== '');
-                                    setEventData(prev => ({
-                                        ...prev,
-                                        title: val || (prev.responsible ? `Servicio de ${prev.responsible}` : '')
-                                    }));
-                                }}
+                                onChange={e => setEventData({ ...eventData, title: e.target.value })}
                             />
                         </div>
                     </div>
@@ -208,14 +197,7 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                             placeholder="Cliente / Solicitante"
                             className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                             value={eventData.responsible}
-                            onChange={e => {
-                                const newResp = e.target.value;
-                                setEventData(prev => ({
-                                    ...prev,
-                                    responsible: newResp,
-                                    title: !isTitleManual ? (newResp ? `Servicio de ${newResp}` : '') : prev.title
-                                }));
-                            }}
+                            onChange={e => setEventData({ ...eventData, responsible: e.target.value })}
                         />
                     </div>
                         <div className="space-y-2">
