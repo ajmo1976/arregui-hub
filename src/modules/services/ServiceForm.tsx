@@ -46,8 +46,12 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
         status_date: initialData?.status_date 
             ? new Date(initialData.status_date).toISOString().split('T')[0] 
             : new Date().toISOString().split('T')[0],
-        invoice_number: initialData?.invoice_number || ''
+        invoice_number: initialData?.invoice_number || '',
+        request_date: initialData?.request_date 
+            ? new Date(initialData.request_date).toISOString().split('T')[0] 
+            : new Date().toISOString().split('T')[0]
     });
+    const [isTitleManual, setIsTitleManual] = useState(!!initialData?.title);
     const [details, setDetails] = useState<any[]>(
         initialData?.details?.map((d: any) => ({
             ...d,
@@ -98,15 +102,22 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!eventData.title || !eventData.responsible) {
-            toast.error('Por favor completa los campos principales del evento (Título y Responsable)');
+        if (!eventData.responsible.trim()) {
+            toast.error('Por favor completa el campo Responsable');
             return;
+        }
+
+        let finalTitle = eventData.title.trim();
+        if (!finalTitle) {
+            finalTitle = eventData.responsible.trim() ? `Servicio de ${eventData.responsible.trim()}` : 'Servicio';
         }
 
         setLoading(true);
         try {
             const payload = {
                 ...eventData,
+                title: finalTitle,
+                request_date: eventData.request_date ? new Date(eventData.request_date).toISOString() : new Date().toISOString(),
                 status_date: eventData.status_date ? new Date(eventData.status_date).toISOString() : new Date().toISOString(),
                 details: details.map(d => ({
                     ...d,
@@ -170,29 +181,43 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                 <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
                     {/* Main Event Section */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 bg-white dark:bg-gray-800 p-8 rounded-[2rem] border border-white dark:border-gray-700 shadow-sm">
-                        <div className="space-y-2 md:col-span-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Título del Evento *</label>
-                            <div className="relative group">
-                                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Ej. Conferencia Anual"
-                                    className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                    value={eventData.title}
-                                    onChange={e => setEventData({ ...eventData, title: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Responsable *</label>
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Título del Evento</label>
+                        <div className="relative group">
+                            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
                             <input
                                 type="text"
-                                placeholder="Cliente / Solicitante"
-                                className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                value={eventData.responsible}
-                                onChange={e => setEventData({ ...eventData, responsible: e.target.value })}
+                                placeholder="Ej. Conferencia Anual"
+                                className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                value={eventData.title}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setIsTitleManual(val !== '');
+                                    setEventData(prev => ({
+                                        ...prev,
+                                        title: val || (prev.responsible ? `Servicio de ${prev.responsible}` : '')
+                                    }));
+                                }}
                             />
                         </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Responsable *</label>
+                        <input
+                            type="text"
+                            placeholder="Cliente / Solicitante"
+                            className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                            value={eventData.responsible}
+                            onChange={e => {
+                                const newResp = e.target.value;
+                                setEventData(prev => ({
+                                    ...prev,
+                                    responsible: newResp,
+                                    title: !isTitleManual ? (newResp ? `Servicio de ${newResp}` : '') : prev.title
+                                }));
+                            }}
+                        />
+                    </div>
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Empresa</label>
                             <div className="relative group">
@@ -225,9 +250,9 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                                 <input
                                     type="date"
-                                    readOnly
-                                    className="w-full pl-11 pr-4 py-3.5 bg-gray-100/50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl font-medium outline-none cursor-not-allowed"
-                                    value={initialData?.request_date ? new Date(initialData.request_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                                    className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                    value={eventData.request_date}
+                                    onChange={e => setEventData({ ...eventData, request_date: e.target.value })}
                                 />
                             </div>
                         </div>
