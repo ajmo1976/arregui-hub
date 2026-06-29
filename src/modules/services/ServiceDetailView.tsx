@@ -70,6 +70,8 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
     const isBasicUser = user?.role_name?.toLowerCase() === 'básico' || user?.role_name?.toLowerCase() === 'basico';
     if (!event) return null;
 
+    const [activeDetailIndex, setActiveDetailIndex] = React.useState(0);
+
     const isOwner = user?.is_superuser || Number(event.created_by?.id || event.created_by) === Number(user?.id) || event.responsible === user?.full_name;
 
     const totalAmount = event.details?.reduce((acc: number, d: any) => acc + d.estimated_amount, 0) || 0;
@@ -704,10 +706,10 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-5xl max-h-[90vh] bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col font-inter"
+                className="relative w-full max-w-7xl h-[90vh] bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col font-inter"
             >
                 {/* Header */}
-                <div className="p-8 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between relative overflow-hidden">
+                <div className="p-8 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between relative overflow-hidden flex-shrink-0">
                     <div className="flex items-center gap-4 relative z-10">
                         <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
                             <UtensilsCrossed size={28} strokeWidth={2.5} />
@@ -788,7 +790,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 relative z-10">
+                    <div className="flex items-center gap-3 relative z-10 flex-shrink-0">
                         {isOwner && onEdit && (
                             <button
                                 onClick={() => onEdit(event)}
@@ -832,9 +834,9 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+                <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="p-8 pb-4 grid grid-cols-1 md:grid-cols-3 gap-6 flex-shrink-0">
                         <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4 group hover:border-primary/20 transition-all">
                             <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
                                 <Users size={24} />
@@ -868,54 +870,67 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                         </div>
                     </div>
 
-                    {/* Services Timeline/List */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-3 px-2">
-                            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
-                                <Clock size={16} />
-                            </div>
-                            <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter">Cronograma de Servicios</h3>
+                    {/* Services Workspace */}
+                    <div className="flex-1 flex overflow-hidden min-h-0 bg-white dark:bg-gray-805 rounded-[2rem] border border-gray-150 dark:border-gray-750/50 shadow-sm mx-8 mb-8">
+                        {/* Sidebar (Left) */}
+                        <div className="w-80 border-r border-gray-200 dark:border-gray-800 p-6 flex flex-col gap-3 overflow-y-auto custom-scrollbar flex-shrink-0 bg-white dark:bg-gray-800">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Cronograma de Servicios</span>
+                            {event.details?.map((detail: any, idx: number) => (
+                                <button
+                                    key={detail.id || idx}
+                                    onClick={() => setActiveDetailIndex(idx)}
+                                    className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all text-left border ${
+                                        activeDetailIndex === idx
+                                            ? 'bg-primary/5 dark:bg-primary/10 text-primary border-primary font-black shadow-sm'
+                                            : 'bg-white dark:bg-gray-900/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-transparent font-medium'
+                                    }`}
+                                >
+                                    {/* Compact Calendar Node */}
+                                    <div className={`w-12 h-12 flex-shrink-0 rounded-2xl flex flex-col items-center justify-center border transition-colors ${
+                                        activeDetailIndex === idx
+                                            ? 'bg-primary text-white border-primary'
+                                            : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'
+                                    }`}>
+                                        <span className="text-[8px] font-black uppercase tracking-tight leading-none">{getNeutralMonthShort(detail.service_date)}</span>
+                                        <span className="text-sm font-black tracking-tighter mt-0.5">{getNeutralDay(detail.service_date)}</span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-xs font-bold truncate text-gray-900 dark:text-white uppercase tracking-tight">{detail.location || 'Sin Ubicación'}</div>
+                                        <div className="text-[10px] text-gray-500 mt-0.5">{detail.service_time}</div>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
 
-                        <div className="space-y-8 relative">
-                            {/* Vertical Line for Timeline Aesthethic */}
-                            <div className="absolute left-10 top-10 bottom-10 w-0.5 bg-gray-100 dark:bg-gray-800 hidden md:block" />
-
-                            {event.details?.map((detail: any, idx: number) => (
-                                <motion.div
-                                    key={detail.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.1 }}
-                                    className="relative flex flex-col md:flex-row gap-8 items-start group"
-                                >
-                                    {/* Timeline Node */}
-                                    <div className="hidden md:flex flex-shrink-0 w-20 h-20 rounded-3xl bg-white dark:bg-gray-800 border-2 border-primary/20 items-center justify-center z-10 shadow-sm group-hover:border-primary transition-colors">
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-xs font-black text-primary uppercase">{getNeutralMonthShort(detail.service_date)}</span>
-                                            <span className="text-xl font-black text-gray-900 dark:text-white tracking-tighter">{getNeutralDay(detail.service_date)}</span>
-                                        </div>
+                        {/* Active Service Detail Workspace (Right) */}
+                        <div className="flex-1 p-8 overflow-y-auto custom-scrollbar bg-gray-50/50 dark:bg-gray-900/10">
+                            {(() => {
+                                const detail = event.details?.[activeDetailIndex] || event.details?.[0];
+                                if (!detail) return (
+                                    <div className="flex items-center justify-center h-full text-gray-400 italic">
+                                        No hay servicios registrados.
                                     </div>
+                                );
 
-                                    {/* Card Content */}
-                                    <div className="flex-1 bg-white dark:bg-gray-800 p-8 rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all">
-                                        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-50 dark:border-gray-700">
+                                return (
+                                    <div className="space-y-8">
+                                        <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-gray-150 dark:border-gray-750">
                                             <div className="flex items-center gap-6">
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Hora del Servicio</span>
-                                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 uppercase tracking-tight">
+                                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 uppercase tracking-tight mt-0.5">
                                                         <Clock size={14} className="text-primary/60" /> {detail.service_time}
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Personas</span>
-                                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 uppercase tracking-tight">
+                                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 uppercase tracking-tight mt-0.5">
                                                         <Users size={14} className="text-primary/60" /> {detail.attendees} PAX
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Ubicación</span>
-                                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 uppercase tracking-tight">
+                                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 uppercase tracking-tight mt-0.5">
                                                         <MapPin size={14} className="text-primary/60" /> {detail.location}
                                                     </span>
                                                 </div>
@@ -932,7 +947,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                                             e.stopPropagation();
                                                             handlePrint(detail);
                                                         }}
-                                                        className="p-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl text-gray-400 hover:text-primary hover:border-primary/30 transition-all active:scale-95 shadow-sm"
+                                                        className="p-3 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-750 rounded-xl text-gray-400 hover:text-primary hover:border-primary/30 transition-all active:scale-95 shadow-sm"
                                                         title="Imprimir Comanda"
                                                     >
                                                         <Printer size={20} />
@@ -941,7 +956,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                             {/* Menu Selected Items */}
                                             <div className="space-y-4">
                                                 <h4 className="text-[11px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
@@ -955,7 +970,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                                             const itemSubtotal = (item.price || 0) * (item.quantity || 1) * mult;
 
                                                             return (
-                                                                <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700 group/item hover:border-primary/30 transition-all">
+                                                                <div key={item.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 group/item hover:border-primary/30 transition-all">
                                                                     <div className="flex items-center gap-3">
                                                                         <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
                                                                             <CheckCircle2 size={12} className="text-primary" />
@@ -981,7 +996,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                                             );
                                                         })
                                                     ) : (
-                                                        <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+                                                        <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
                                                             <p className="text-xs text-gray-400 italic font-medium">No hay ítems de menú seleccionados</p>
                                                         </div>
                                                     )}
@@ -994,9 +1009,9 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                                     <h4 className="text-[11px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
                                                         <LayoutGrid size={12} className="text-primary" /> Logística / Requerimientos
                                                     </h4>
-                                                    <div className="bg-gray-50/50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 min-h-[80px]">
+                                                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 min-h-[80px]">
                                                         <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
-                                                            {detail.additional_requirements || 'Sin requerimientos especiales registrados.'}
+                                                            {detail.additional_requirements || 'Sin requerimientos específicos.'}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -1012,14 +1027,14 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                             </div>
                                         </div>
                                     </div>
-                                </motion.div>
-                            ))}
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
 
                 {/* Footer Portal Actions */}
-                <div className="p-8 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-4">
+                <div className="p-8 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-4 flex-shrink-0">
                     <div className="flex gap-8">
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Creado el</span>
@@ -1041,7 +1056,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={onClose}
-                            className="px-10 py-3.5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
+                            className="px-10 py-3.5 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-750 hover:bg-gray-50 dark:hover:bg-gray-850 text-gray-500 dark:text-gray-400 rounded-2xl font-bold transition-all active:scale-95 shadow-sm text-sm"
                         >
                             Cerrar
                         </button>

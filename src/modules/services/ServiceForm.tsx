@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import api, { inventoryApi } from '../../services/api';
 import ServiceDetailCard from './ServiceDetailCard';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 interface ServiceFormProps {
     onClose: (updatedEvent?: any) => void;
@@ -23,8 +24,11 @@ interface ServiceFormProps {
 }
 
 export default function ServiceForm({ onClose, initialData }: ServiceFormProps) {
+    const { formatPrice } = useCurrency();
     const [loading, setLoading] = useState(false);
     const [eventStatuses, setEventStatuses] = useState<any[]>([]);
+    const [showGeneralInfo, setShowGeneralInfo] = useState(true);
+    const [activeDetailIndex, setActiveDetailIndex] = useState(0);
 
     React.useEffect(() => {
         const fetchParams = async () => {
@@ -87,6 +91,12 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
     const removeDetail = (index: number) => {
         if (details.length > 1) {
             setDetails(details.filter((_, i) => i !== index));
+            setActiveDetailIndex(prev => {
+                if (index <= prev) {
+                    return Math.max(0, prev - 1);
+                }
+                return prev;
+            });
         } else {
             toast.warning('Debe haber al menos un servicio en el evento');
         }
@@ -137,6 +147,8 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
         }
     };
 
+    const activeDetail = details[activeDetailIndex] || details[0];
+
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8">
             <motion.div
@@ -151,10 +163,10 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-6xl max-h-[90vh] bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col font-inter"
+                className="relative w-full max-w-7xl h-[90vh] bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col font-inter"
             >
-                {/* Header Portan */}
-                <div className="p-8 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                {/* Header Portal */}
+                <div className="p-8 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
                             <Plus size={24} strokeWidth={3} />
@@ -174,171 +186,224 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
-                    {/* Main Event Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 bg-white dark:bg-gray-800 p-8 rounded-[2rem] border border-white dark:border-gray-700 shadow-sm">
-                    <div className="space-y-2 md:col-span-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Título del Evento</label>
-                        <div className="relative group">
-                            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Ej. Conferencia Anual"
-                                className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                value={eventData.title}
-                                onChange={e => setEventData({ ...eventData, title: e.target.value })}
-                            />
-                        </div>
+                {/* Collapsible Header Toggle */}
+                <div className="flex items-center justify-between px-8 py-3.5 bg-gray-100/50 dark:bg-gray-800/50 border-b border-gray-150 dark:border-gray-750 text-xs font-medium flex-shrink-0">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-gray-500 font-bold">
+                        <span>Evento: <strong className="text-gray-900 dark:text-white uppercase tracking-tight">{eventData.title || 'Servicio'}</strong></span>
+                        <span>•</span>
+                        <span>Responsable: <strong className="text-gray-900 dark:text-white">{eventData.responsible || 'N/A'}</strong></span>
+                        {eventData.cost_center && (
+                            <>
+                                <span>•</span>
+                                <span>C. Costo: <strong className="text-gray-900 dark:text-white">{eventData.cost_center}</strong></span>
+                            </>
+                        )}
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Responsable *</label>
-                        <input
-                            type="text"
-                            placeholder="Cliente / Solicitante"
-                            className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                            value={eventData.responsible}
-                            onChange={e => setEventData({ ...eventData, responsible: e.target.value })}
-                        />
-                    </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Empresa</label>
-                            <div className="relative group">
-                                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Ej. Acme Corp"
-                                    className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                    value={eventData.company}
-                                    onChange={e => setEventData({ ...eventData, company: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Centro de Costo</label>
-                            <div className="relative group">
-                                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Ej. TCN-10200"
-                                    className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                    value={eventData.cost_center}
-                                    onChange={e => setEventData({ ...eventData, cost_center: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Fecha de Solicitud</label>
-                            <div className="relative">
-                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                                <input
-                                    type="date"
-                                    className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                                    value={eventData.request_date}
-                                    onChange={e => setEventData({ ...eventData, request_date: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1 text-right">Estado General</label>
-                            <div className="relative">
-                                <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                                <select
-                                    className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium appearance-none"
-                                    value={eventData.status}
-                                    onChange={e => setEventData({ 
-                                        ...eventData, 
-                                        status: e.target.value,
-                                        status_date: new Date().toISOString().split('T')[0]
-                                    })}
-                                >
-                                    {eventStatuses.map(es => (
-                                        <option key={es.id} value={es.value}>{es.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Fecha de Estado</label>
-                            <div className="relative">
-                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                                <input
-                                    type="date"
-                                    readOnly
-                                    className="w-full pl-11 pr-4 py-3.5 bg-gray-100/50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl font-medium outline-none cursor-not-allowed"
-                                    value={eventData.status_date}
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2 lg:col-span-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Número de Factura</label>
-                            <div className="relative group">
-                                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder={
-                                        (eventData.status === 'Facturado' || eventData.status === 'Cobrado')
-                                            ? "Ej. FAC-00123"
-                                            : "Se habilita al cambiar a Facturado/Cobrado"
-                                    }
-                                    disabled={eventData.status !== 'Facturado' && eventData.status !== 'Cobrado'}
-                                    className={`w-full pl-11 pr-4 py-3.5 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium ${
-                                        (eventData.status === 'Facturado' || eventData.status === 'Cobrado')
-                                            ? "bg-white dark:bg-gray-900 focus:bg-white"
-                                            : "bg-gray-100/50 dark:bg-gray-800 cursor-not-allowed text-gray-400"
-                                    }`}
-                                    value={eventData.invoice_number || ''}
-                                    onChange={e => setEventData({ ...eventData, invoice_number: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowGeneralInfo(!showGeneralInfo)}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-gray-800 border border-gray-250 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-350 rounded-lg transition-all"
+                    >
+                        <span>{showGeneralInfo ? 'Ocultar Datos Generales' : 'Mostrar Datos Generales'}</span>
+                    </button>
+                </div>
 
-                    {/* Service Details Section */}
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between px-2">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-primary/10 rounded-xl text-primary">
-                                    <ClipboardCheck size={18} />
+                <AnimatePresence initial={false}>
+                    {showGeneralInfo && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex-shrink-0"
+                        >
+                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Título del Evento</label>
+                                    <div className="relative group">
+                                        <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Ej. Conferencia Anual"
+                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm"
+                                            value={eventData.title}
+                                            onChange={e => setEventData({ ...eventData, title: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
-                                <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Servicios a Solicitar</h3>
-                            </div>
-                            <button
-                                onClick={addDetail}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-primary/5 hover:bg-primary/10 text-primary rounded-xl font-bold transition-all"
-                            >
-                                <Plus size={18} />
-                                <span>Agregar Otro Servicio</span>
-                            </button>
-                        </div>
-
-                        <div className="space-y-8">
-                            <AnimatePresence>
-                                {details.map((detail, index) => (
-                                    <ServiceDetailCard
-                                        key={index}
-                                        index={index}
-                                        data={detail}
-                                        onChange={(newData) => updateDetail(index, newData)}
-                                        onDelete={() => removeDetail(index)}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Responsable *</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Cliente / Solicitante"
+                                        className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm"
+                                        value={eventData.responsible}
+                                        onChange={e => setEventData({ ...eventData, responsible: e.target.value })}
                                     />
-                                ))}
-                            </AnimatePresence>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Empresa</label>
+                                    <div className="relative group">
+                                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Ej. Acme Corp"
+                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm"
+                                            value={eventData.company}
+                                            onChange={e => setEventData({ ...eventData, company: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Centro de Costo</label>
+                                    <div className="relative group">
+                                        <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Ej. TCN-10200"
+                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm"
+                                            value={eventData.cost_center}
+                                            onChange={e => setEventData({ ...eventData, cost_center: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Fecha de Solicitud</label>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                                        <input
+                                            type="date"
+                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm"
+                                            value={eventData.request_date}
+                                            onChange={e => setEventData({ ...eventData, request_date: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1 text-right">Estado General</label>
+                                    <div className="relative">
+                                        <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                                        <select
+                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium appearance-none text-sm"
+                                            value={eventData.status}
+                                            onChange={e => setEventData({ 
+                                                ...eventData, 
+                                                status: e.target.value,
+                                                status_date: new Date().toISOString().split('T')[0]
+                                            })}
+                                        >
+                                            {eventStatuses.map(es => (
+                                                <option key={es.id} value={es.value}>{es.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Fecha de Estado</label>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                                        <input
+                                            type="date"
+                                            readOnly
+                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-100/50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl font-medium outline-none cursor-not-allowed text-sm"
+                                            value={eventData.status_date}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2 lg:col-span-2">
+                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Número de Factura</label>
+                                    <div className="relative group">
+                                        <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder={
+                                                (eventData.status === 'Facturado' || eventData.status === 'Cobrado')
+                                                    ? "Ej. FAC-00123"
+                                                    : "Se habilita al cambiar a Facturado/Cobrado"
+                                            }
+                                            disabled={eventData.status !== 'Facturado' && eventData.status !== 'Cobrado'}
+                                            className={`w-full pl-11 pr-4 py-3.5 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm ${
+                                                (eventData.status === 'Facturado' || eventData.status === 'Cobrado')
+                                                    ? "bg-white dark:bg-gray-900 focus:bg-white"
+                                                    : "bg-gray-100/50 dark:bg-gray-800 cursor-not-allowed text-gray-400"
+                                            }`}
+                                            value={eventData.invoice_number || ''}
+                                            onChange={e => setEventData({ ...eventData, invoice_number: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Main Split Pane Workspace */}
+                <div className="flex-1 flex overflow-hidden min-h-0 bg-gray-50 dark:bg-gray-900">
+                    {/* Sidebar (Left) */}
+                    <div className="w-80 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 p-6 flex flex-col overflow-y-auto custom-scrollbar flex-shrink-0">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Servicios en la Solicitud</span>
+                        <div className="space-y-3 flex-1">
+                            {details.map((d, idx) => (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setActiveDetailIndex(idx)}
+                                    className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border text-left ${
+                                        activeDetailIndex === idx
+                                            ? 'bg-primary/5 dark:bg-primary/10 text-primary border-primary shadow-sm font-black'
+                                            : 'bg-white dark:bg-gray-900/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-100 dark:border-gray-700/50 font-medium'
+                                    }`}
+                                >
+                                    <div className="min-w-0">
+                                        <div className="text-[9px] font-black uppercase tracking-wider text-gray-400">Servicio #{idx + 1}</div>
+                                        <div className="text-xs font-bold truncate max-w-[130px] mt-0.5 text-gray-900 dark:text-white">{d.location || 'Sin Ubicación'}</div>
+                                        <div className="text-[10px] text-gray-500 mt-0.5">{d.service_date} - {d.service_time}</div>
+                                    </div>
+                                    <div className="flex-shrink-0 ml-2">
+                                        <span className="text-[10px] font-black text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-lg">
+                                            {formatPrice(d.estimated_amount || 0)}
+                                        </span>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                addDetail();
+                                setActiveDetailIndex(details.length);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary/5 hover:bg-primary/10 text-primary rounded-2xl font-bold transition-all mt-6 border border-dashed border-primary/20 flex-shrink-0 active:scale-95"
+                        >
+                            <Plus size={18} />
+                            <span>Agregar Servicio</span>
+                        </button>
+                    </div>
+
+                    {/* Active Workspace Area (Right) */}
+                    <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+                        {details.length > 0 && (
+                            <ServiceDetailCard
+                                index={activeDetailIndex}
+                                data={activeDetail}
+                                onChange={(newData) => updateDetail(activeDetailIndex, newData)}
+                                onDelete={() => removeDetail(activeDetailIndex)}
+                            />
+                        )}
                     </div>
                 </div>
 
                 {/* Footer Portal */}
-                <div className="p-8 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex items-center justify-end gap-4 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)]">
+                <div className="p-8 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex items-center justify-end gap-4 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)] flex-shrink-0">
                     <button
                         onClick={onClose}
-                        className="px-8 py-3.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95"
+                        className="px-8 py-3.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 text-sm"
                     >
                         Cancelar
                     </button>
                     <button
                         onClick={handleSubmit}
                         disabled={loading}
-                        className="flex items-center gap-3 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white rounded-2xl font-black shadow-xl shadow-primary/20 transition-all active:scale-95 disabled:opacity-50"
+                        className="flex items-center gap-3 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white rounded-2xl font-black shadow-xl shadow-primary/20 transition-all active:scale-95 disabled:opacity-50 text-sm"
                     >
                         {loading ? <Loader2 className="animate-spin" size={24} /> : (
                             <>
