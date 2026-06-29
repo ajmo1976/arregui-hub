@@ -120,7 +120,7 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
         const newItems = (data.selected_items || []).map((item: any) =>
             String(item.id) === String(productId) ? {
                 ...item,
-                quantity: Math.max(1, quantity),
+                quantity: Math.max(0, quantity),
                 is_sold_by_case: catalogItem?.is_sold_by_case ?? item.is_sold_by_case,
                 units_per_case: catalogItem?.units_per_case ?? item.units_per_case
             } : item
@@ -385,8 +385,10 @@ export default function ServiceDetailCard({ index, data, onChange, onDelete }: S
                                                             </button>
                                                             <input
                                                                 type="number"
-                                                                value={selectedItem.quantity || 1}
-                                                                onChange={(e) => updateItemQuantity(p.id, parseInt(e.target.value) || 1)}
+                                                                step="any"
+                                                                min="0"
+                                                                value={selectedItem.quantity !== undefined && selectedItem.quantity !== null ? selectedItem.quantity : ''}
+                                                                onChange={(e) => updateItemQuantity(p.id, parseFloat(e.target.value) || 0)}
                                                                 className="w-12 text-center bg-transparent border-none outline-none font-black text-xs text-gray-900 dark:text-white"
                                                             />
                                                             <button
