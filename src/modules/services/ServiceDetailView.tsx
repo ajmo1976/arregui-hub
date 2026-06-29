@@ -827,36 +827,46 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                 {/* Content */}
                 <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                     {/* Summary Cards */}
-                    <div className="p-8 pb-4 grid grid-cols-1 md:grid-cols-3 gap-6 flex-shrink-0">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4 group hover:border-primary/20 transition-all">
-                            <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
-                                <Users size={24} />
+                    <div className="px-8 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 flex-shrink-0 bg-gray-50 dark:bg-gray-900">
+                        <div className="bg-white dark:bg-gray-800 px-4 py-3 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-3 transition-all hover:border-primary/20">
+                            <div className="w-9 h-9 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-500 flex-shrink-0">
+                                <Users size={18} />
                             </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Personas</p>
-                                <p className="text-xl font-black text-gray-900 dark:text-white tracking-tight">{totalAttendees}</p>
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Total Personas</span>
+                                <span className="text-base font-black text-gray-900 dark:text-white leading-none">{totalAttendees}</span>
                             </div>
                         </div>
 
-                        {canShowPrices && (
-                            <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4 group hover:border-primary/20 transition-all">
-                                <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center text-green-500 group-hover:scale-110 transition-transform">
-                                    <DollarSign size={24} />
+                        {canShowPrices ? (
+                            <div className="bg-white dark:bg-gray-800 px-4 py-3 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-3 transition-all hover:border-primary/20">
+                                <div className="w-9 h-9 bg-green-50 dark:bg-green-900/20 rounded-xl flex items-center justify-center text-green-500 flex-shrink-0">
+                                    <DollarSign size={18} />
                                 </div>
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Presupuesto Estimado</p>
-                                    <p className="text-xl font-black text-gray-900 dark:text-white tracking-tight">{formatPrice(totalAmount)}</p>
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Presupuesto Estimado</span>
+                                    <span className="text-base font-black text-gray-900 dark:text-white leading-none">{formatPrice(totalAmount)}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-white dark:bg-gray-800 px-4 py-3 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-3 transition-all">
+                                <div className="w-9 h-9 bg-gray-50 dark:bg-gray-900/20 rounded-xl flex items-center justify-center text-gray-400 flex-shrink-0">
+                                    <DollarSign size={18} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Presupuesto Estimado</span>
+                                    <span className="text-base font-black text-gray-900 dark:text-white leading-none">***</span>
                                 </div>
                             </div>
                         )}
 
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4 group hover:border-primary/20 transition-all">
-                            <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/20 rounded-2xl flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform">
-                                <ClipboardList size={24} />
+                        <div className="bg-white dark:bg-gray-800 px-4 py-3 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-3 transition-all hover:border-primary/20">
+                            <div className="w-9 h-9 bg-purple-50 dark:bg-purple-900/20 rounded-xl flex items-center justify-center text-purple-500 flex-shrink-0">
+                                <ClipboardList size={18} />
                             </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Servicios Incluidos</p>
-                                <p className="text-xl font-black text-gray-900 dark:text-white tracking-tight">{event.details?.length || 0}</p>
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Servicios Incluidos</span>
+                                <span className="text-base font-black text-gray-900 dark:text-white leading-none">{event.details?.length || 0}</span>
                             </div>
                         </div>
                     </div>
