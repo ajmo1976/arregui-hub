@@ -1126,7 +1126,7 @@ export default function ServicesView() {
 
     if (showModal || editingEvent) {
         return (
-            <div className="p-8 max-w-[1600px] mx-auto font-inter animate-in fade-in duration-200">
+            <div className="w-full h-full font-inter animate-in fade-in duration-200">
                 <ServiceForm
                     initialData={editingEvent}
                     onClose={(updatedEvent) => {
@@ -1144,7 +1144,7 @@ export default function ServicesView() {
 
     if (selectedEvent) {
         return (
-            <div className="p-8 max-w-[1600px] mx-auto font-inter animate-in fade-in duration-200">
+            <div className="w-full h-full font-inter animate-in fade-in duration-200">
                 <ServiceDetailView
                     event={selectedEvent}
                     onClose={() => setSelectedEvent(null)}

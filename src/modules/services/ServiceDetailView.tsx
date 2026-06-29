@@ -697,7 +697,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="w-full h-[calc(100vh-160px)] bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col font-inter"
+            className="w-full h-[calc(100vh-73px)] bg-gray-50 dark:bg-gray-900 overflow-hidden flex flex-col font-inter"
         >
                 {/* Header */}
                 <div className="p-8 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between relative overflow-hidden flex-shrink-0">
