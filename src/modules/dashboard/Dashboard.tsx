@@ -69,11 +69,17 @@ export default function Dashboard() {
     const [data, setData] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [range, setRange] = useState('month');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
-    const fetchDashboardData = async (selectedRange = range) => {
+    const fetchDashboardData = async (selectedRange = range, sDate = startDate, eDate = endDate) => {
         try {
             setLoading(true);
-            const res = await inventoryApi.getDashboardSummary(selectedRange);
+            const res = await inventoryApi.getDashboardSummary(
+                selectedRange,
+                selectedRange === 'custom' ? sDate : undefined,
+                selectedRange === 'custom' ? eDate : undefined
+            );
             setData(res.data);
         } catch (err) {
             toast.error('Error al cargar datos del dashboard');
@@ -83,8 +89,24 @@ export default function Dashboard() {
     };
 
     useEffect(() => {
-        fetchDashboardData(range);
-    }, [range]);
+        if (range !== 'custom') {
+            fetchDashboardData(range);
+        } else if (startDate && endDate) {
+            fetchDashboardData(range, startDate, endDate);
+        }
+    }, [range, startDate, endDate]);
+
+    const getComparisonLabel = () => {
+        switch (range) {
+            case 'day': return 'vs día anterior';
+            case 'week': return 'vs semana anterior';
+            case 'month': return 'vs mes anterior';
+            case 'last_month': return 'vs mes anterior';
+            case 'year': return 'vs año anterior';
+            case 'custom': return 'vs periodo anterior';
+            default: return 'vs anterior';
+        }
+    };
 
     if (loading && !data) {
         return (
@@ -145,7 +167,9 @@ export default function Dashboard() {
         { label: 'Día', value: 'day' },
         { label: 'Semana', value: 'week' },
         { label: 'Mes', value: 'month' },
+        { label: 'Mes Pasado', value: 'last_month' },
         { label: 'Año', value: 'year' },
+        { label: 'Personalizado', value: 'custom' },
     ];
 
     return (
@@ -158,12 +182,12 @@ export default function Dashboard() {
                 </div>
 
                 <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900 p-1.5 rounded-2xl border border-gray-200/50 dark:border-gray-700 shadow-inner">
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-wrap">
                         {rangeOptions.map((opt) => (
                             <button
                                 key={opt.value}
                                 onClick={() => setRange(opt.value)}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${range === opt.value
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${range === opt.value
                                     ? 'bg-white dark:bg-gray-800 text-primary shadow-sm border border-gray-200/50 dark:border-gray-700'
                                     : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
                                     }`}
@@ -182,6 +206,47 @@ export default function Dashboard() {
                     </button>
                 </div>
             </div>
+
+            {/* Custom Date Picker Row */}
+            <AnimatePresence>
+                {range === 'custom' && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                        animate={{ opacity: 1, height: 'auto', marginTop: 24 }}
+                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-gray-800 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-sm max-w-2xl">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Rango de Fecha:</span>
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Desde</span>
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200/50 dark:border-gray-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700 dark:text-gray-300"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Hasta</span>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200/50 dark:border-gray-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 text-gray-700 dark:text-gray-300"
+                                    />
+                                </div>
+                            </div>
+                            {(!startDate || !endDate) && (
+                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest animate-pulse sm:mt-0 sm:ml-auto">
+                                    Selecciona ambas fechas para cargar
+                                </span>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Fila 1: KPIs Financieros (Only if authorized) */}
             {canShowPrices && (
@@ -207,7 +272,7 @@ export default function Dashboard() {
                                 <span className={`flex items-center gap-0.5 text-[10px] font-black ${stat.trend.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'} uppercase tracking-tighter`}>
                                     {stat.trend.startsWith('+') ? <TrendingUp size={10} /> : <TrendingDown size={10} />} {stat.trend}
                                 </span>
-                                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">vs mes anterior</span>
+                                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">{getComparisonLabel()}</span>
                             </div>
                             <div className="mt-2 h-10 w-full opacity-60 group-hover:opacity-100 transition-opacity">
                                 <ResponsiveContainer width="100%" height="100%">

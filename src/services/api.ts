@@ -191,8 +191,12 @@ export const inventoryApi = {
     createMealPrice: (data: any) => api.post('/operational/meal-prices', data),
     deleteMealPrice: (id: number) => api.delete(`/operational/meal-prices/${id}`),
 
-    // Dashboard
-    getDashboardSummary: (rangeType: string = 'month') => api.get(`/dashboard/summary?range_type=${rangeType}`),
+    getDashboardSummary: (rangeType: string = 'month', startDate?: string, endDate?: string) => {
+        let url = `/dashboard/summary?range_type=${rangeType}`;
+        if (startDate) url += `&start_date=${startDate}`;
+        if (endDate) url += `&end_date=${endDate}`;
+        return api.get(url);
+    },
 
     // Economy & Rates
     getExchangeRates: () => api.get('/economy/rates'),
