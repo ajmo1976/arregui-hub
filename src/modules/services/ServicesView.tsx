@@ -13,7 +13,8 @@ import {
     Edit3,
     Trash2,
     Copy,
-    Printer
+    Printer,
+    FileSpreadsheet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -1118,6 +1119,67 @@ export default function ServicesView() {
         printWindow.document.close();
     };
 
+    const handleExportToExcel = () => {
+        if (filteredEvents.length === 0) return;
+
+        let csvContent = '\uFEFF'; // UTF-8 BOM
+        csvContent += 'sep=;\r\n';
+        csvContent += `CONSOLIDADO DE FACTURACIÓN - ARREGUI HUB\r\n`;
+        csvContent += `Cantidad de Servicios;${filteredEvents.length}\r\n`;
+        csvContent += '\r\n';
+
+        // Headers
+        csvContent += 'ID Evento;Título Evento;Responsable;Cliente;Centro de Costo;Fecha Solicitud;Estado;Factura;Nº Sub-Servicio;Fecha Servicio;Hora;Sala/Ubicación;PAX;Descripción Ítem;Cant.;Unidad;P. Unitario;Subtotal;Requerimientos;Observaciones\r\n';
+
+        let grandTotal = 0;
+        filteredEvents.forEach(event => {
+            const requestDateStr = event.request_date
+                ? new Date(event.request_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                : 'N/A';
+
+            const details = event.details || [];
+            details.forEach((d: any, idx: number) => {
+                const dateStr = formatNeutralDate(d.service_date);
+                const timeStr = d.service_time || '';
+                const location = d.location || 'N/A';
+                const attendees = d.attendees || 0;
+
+                const items = d.selected_items && d.selected_items.length > 0 ? d.selected_items : [];
+                if (items.length === 0) {
+                    csvContent += `${event.id};"${(event.title || '').replace(/"/g, '""').replace(/;/g, ',')}";"${event.responsible || ''}";"${event.company || 'NO ESPECIFICADA'}";"${event.cost_center || 'NO ESPECIFICADO'}";${requestDateStr};"${event.status || ''}";"${event.invoice_number || ''}";Servicio ${idx + 1};${dateStr};${timeStr};${location};${attendees};Sin platos/snack registrados;0;Unidad;0;0;"${(d.additional_requirements || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ')}";"${(d.observations || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ')}"\r\n`;
+                } else {
+                    items.forEach((item: any) => {
+                        const qty = item.quantity || 1;
+                        const price = item.price || 0;
+                        const unit = item.unit || 'Unidad';
+                        const mult = (unit === 'Caja' && item.is_sold_by_case) ? (item.units_per_case || 1) : 1;
+                        const sub = qty * price * mult;
+                        grandTotal += sub;
+
+                        const eventTitle = (event.title || '').replace(/"/g, '""').replace(/;/g, ',');
+                        const itemName = (item.name || '').replace(/"/g, '""').replace(/;/g, ',');
+                        const reqs = (d.additional_requirements || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ');
+                        const obs = (d.observations || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ');
+
+                        csvContent += `${event.id};"${eventTitle}";"${event.responsible || ''}";"${event.company || 'NO ESPECIFICADA'}";"${event.cost_center || 'NO ESPECIFICADO'}";${requestDateStr};"${event.status || ''}";"${event.invoice_number || ''}";Servicio ${idx + 1};${dateStr};${timeStr};${location};${attendees};"${itemName}";${qty};${unit};${price};${sub};"${reqs}";"${obs}"\r\n`;
+                    });
+                }
+            });
+        });
+
+        csvContent += `\r\n;;;;;;;;;;;;;;;;Total General;${grandTotal};;\r\n`;
+
+        // Download trigger
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Consolidado_Facturacion_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     useEffect(() => {
         fetchEvents();
     }, []);
@@ -1320,14 +1382,24 @@ export default function ServicesView() {
                                 </button>
                             )}
                             {!isBasicUser && canShowPrices && (
-                                <button
-                                    onClick={handlePrintInvoicingReport}
-                                    className="flex items-center justify-center gap-2 px-5 py-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 dark:bg-emerald-950/20 dark:border-emerald-900 dark:text-emerald-400 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-sm"
-                                    title="Imprimir Reporte para Facturar (con Costos)"
-                                >
-                                    <Printer size={18} />
-                                    <span>Reporte Facturación</span>
-                                </button>
+                                <>
+                                    <button
+                                        onClick={handlePrintInvoicingReport}
+                                        className="flex items-center justify-center gap-2 px-5 py-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 dark:bg-emerald-950/20 dark:border-emerald-900 dark:text-emerald-400 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-sm"
+                                        title="Imprimir Reporte para Facturar (con Costos)"
+                                    >
+                                        <Printer size={18} />
+                                        <span>Reporte Facturación</span>
+                                    </button>
+                                    <button
+                                        onClick={handleExportToExcel}
+                                        className="flex items-center justify-center gap-2 px-5 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-sm"
+                                        title="Exportar Consolidado a Excel"
+                                    >
+                                        <FileSpreadsheet size={18} />
+                                        <span>Exportar Excel</span>
+                                    </button>
+                                </>
                             )}
                             {(searchTerm || filterId || filterTitleResp || filterDate || filterLocation || filterCostCenter || filterStatus) && (
                                 <button
