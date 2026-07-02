@@ -631,11 +631,11 @@ export default function ServicesView() {
                             justify-content: space-between;
                             align-items: flex-start;
                             border-bottom: 2px solid #10b981;
-                            padding-bottom: 12px;
-                            margin-bottom: 20px;
+                            padding-bottom: 6px;
+                            margin-bottom: 12px;
                         }
                         .company-info h1 {
-                            font-size: 20px;
+                            font-size: 16px;
                             font-weight: 900;
                             margin: 0;
                             color: #10b981;
@@ -643,8 +643,8 @@ export default function ServicesView() {
                             letter-spacing: -0.02em;
                         }
                         .company-info p {
-                            margin: 2px 0 0 0;
-                            font-size: 10px;
+                            margin: 0;
+                            font-size: 8.5px;
                             color: #6b7280;
                             font-weight: 500;
                         }
@@ -652,15 +652,15 @@ export default function ServicesView() {
                             text-align: right;
                         }
                         .invoice-title h2 {
-                            font-size: 18px;
+                            font-size: 14px;
                             font-weight: 900;
                             margin: 0;
                             color: #111827;
                             text-transform: uppercase;
                         }
                         .invoice-title p {
-                            margin: 2px 0 0 0;
-                            font-size: 11px;
+                            margin: 0;
+                            font-size: 9.5px;
                             color: #374151;
                             font-weight: 700;
                         }
@@ -670,41 +670,42 @@ export default function ServicesView() {
                             border-spacing: 0;
                             background-color: #f9fafb;
                             border: 1px solid #e5e7eb;
-                            border-radius: 12px;
-                            margin-bottom: 25px;
+                            border-radius: 8px;
+                            margin-bottom: 12px;
                             overflow: hidden;
                         }
                         .metadata-col {
                             vertical-align: top;
+                            padding: 8px 12px;
                         }
                         .metadata-group-title {
-                            font-size: 10px;
+                            font-size: 9px;
                             font-weight: 900;
                             color: #10b981;
                             text-transform: uppercase;
                             letter-spacing: 0.05em;
-                            margin-bottom: 12px;
+                            margin-bottom: 6px;
                             border-bottom: 1px solid #f3f4f6;
-                            padding-bottom: 6px;
+                            padding-bottom: 3px;
                         }
                         .metadata-item {
-                            margin-bottom: 10px;
+                            margin-bottom: 6px;
                         }
                         .metadata-item:last-child {
                             margin-bottom: 0;
                         }
                         .metadata-label {
                             display: block;
-                            font-size: 8px;
+                            font-size: 7.5px;
                             font-weight: 800;
                             text-transform: uppercase;
                             color: #9ca3af;
                             letter-spacing: 0.05em;
-                            margin-bottom: 2px;
+                            margin-bottom: 1px;
                         }
                         .metadata-value {
                             display: block;
-                            font-size: 12px;
+                            font-size: 10.5px;
                             font-weight: 700;
                             color: #1f2937;
                         }
@@ -875,6 +876,57 @@ export default function ServicesView() {
                         .no-print-btn:hover {
                             background-color: #059669;
                         }
+
+                        /* Barra de metadatos horizontal y compacta */
+                        .detail-meta-clean {
+                            display: flex;
+                            flex-wrap: wrap;
+                            gap: 8px 15px;
+                            background-color: #f3f4f6;
+                            border-radius: 6px;
+                            padding: 6px 12px;
+                            margin-bottom: 8px;
+                            font-size: 10px;
+                        }
+                        .detail-meta-clean span {
+                            color: #4b5563;
+                        }
+                        .detail-meta-clean strong {
+                            color: #1f2937;
+                            font-weight: 600;
+                        }
+
+                        /* Reglas compactas cuando hay múltiples servicios */
+                        .multiple-services-print .detail-section {
+                            margin-bottom: 12px;
+                        }
+                        .multiple-services-print .detail-header {
+                            margin-bottom: 6px;
+                            padding-bottom: 4px;
+                        }
+                        .multiple-services-print .detail-header h2 {
+                            font-size: 11px;
+                        }
+                        .multiple-services-print table {
+                            margin-bottom: 6px;
+                        }
+                        .multiple-services-print th {
+                            padding: 4px 6px;
+                            font-size: 8px;
+                        }
+                        .multiple-services-print td {
+                            padding: 4px 6px;
+                            font-size: 9.5px;
+                        }
+                        .multiple-services-print .detail-total-row td {
+                            padding: 4px 6px;
+                        }
+                        .multiple-services-print .requirements-box, 
+                        .multiple-services-print .observations-box {
+                            margin-top: 4px;
+                            padding: 4px 8px;
+                            font-size: 9px;
+                        }
                     </style>
                 </head>
                 <body>
@@ -932,6 +984,14 @@ export default function ServicesView() {
                         <div class="detail-header">
                             <h2>${details.length > 1 ? `Servicio ${idx + 1} de ${details.length} (Reg. ${detailId})` : 'Detalle del Servicio'}</h2>
                         </div>
+                        ${details.length > 1 ? `
+                        <div class="detail-meta-clean">
+                            <span><strong>Fecha:</strong> ${dateStr}</span>
+                            <span><strong>Hora:</strong> ${timeStr}</span>
+                            <span><strong>Ubicación:</strong> ${d.location || 'N/A'}</span>
+                            <span><strong>PAX:</strong> ${d.attendees || 0} personas</span>
+                        </div>
+                        ` : `
                         <table class="detail-meta-table">
                             <tr>
                                 <td style="width: 25%;"><span class="meta-label">Fecha</span><span class="meta-value">${dateStr}</span></td>
@@ -940,6 +1000,7 @@ export default function ServicesView() {
                                 <td style="width: 25%;"><span class="meta-label">PAX</span><span class="meta-value">${d.attendees || 0} personas</span></td>
                             </tr>
                         </table>
+                        `}
                         
                         <table>
                             <thead>
@@ -976,7 +1037,7 @@ export default function ServicesView() {
             });
 
             fullHtml += `
-                <div class="page-container">
+                <div class="page-container ${event.details && event.details.length > 1 ? 'multiple-services-print' : ''}">
                     <div class="header">
                         <div class="company-info">
                             <h1>Arregui Catering</h1>
@@ -990,7 +1051,7 @@ export default function ServicesView() {
 
                     <table class="metadata-table">
                         <tr>
-                            <td class="metadata-col" style="width: 50%; border-right: 1px solid #e5e7eb; padding: 15px;">
+                            <td class="metadata-col" style="width: 50%; border-right: 1px solid #e5e7eb;">
                                 <div class="metadata-group-title">Datos del Servicio</div>
                                 <div class="metadata-item">
                                     <span class="metadata-label">Título del Servicio</span>
@@ -1005,7 +1066,7 @@ export default function ServicesView() {
                                     <span class="metadata-value">${event.gestor || 'ArreguiHub'}</span>
                                 </div>
                             </td>
-                            <td class="metadata-col" style="width: 50%; padding: 15px;">
+                            <td class="metadata-col" style="width: 50%;">
                                 <div class="metadata-group-title">Información de Facturación</div>
                                 <div class="metadata-item">
                                     <span class="metadata-label">Empresa / Cliente</span>
@@ -1019,10 +1080,12 @@ export default function ServicesView() {
                                     <span class="metadata-label">Fecha de Solicitud</span>
                                     <span class="metadata-value">${requestDateStr}</span>
                                 </div>
+                                ${(event.status === 'Facturado' || event.status === 'Cobrado') ? `
                                 <div class="metadata-item">
-                                    <span class="metadata-label">${event.status === 'Facturado' ? 'Fecha de Facturación' : (event.status === 'Cobrado' ? 'Fecha de Cobro' : 'Fecha de Estado')}</span>
+                                    <span class="metadata-label">${event.status === 'Facturado' ? 'Fecha de Facturación' : 'Fecha de Cobro'}</span>
                                     <span class="metadata-value">${statusDateStr}</span>
                                 </div>
+                                ` : ''}
                                 ${event.invoice_number ? `
                                 <div class="metadata-item">
                                     <span class="metadata-label">Nº de Factura</span>
