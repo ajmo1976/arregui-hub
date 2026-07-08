@@ -354,13 +354,13 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                         <tbody>
                             ${itemsRows}
                             <tr class="detail-total-row">
-                                <td colspan="4" class="text-right font-bold">Subtotal Servicio:</td>
-                                <td class="text-right font-bold">${formatPrice(detailTotal)}</td>
+                                <td colspan="4" class="text-right" style="font-weight: 900; font-size: 14px; padding-top: 10px;">Subtotal Servicio:</td>
+                                <td class="text-right" style="font-weight: 900; font-size: 14px; padding-top: 10px;">${formatPrice(detailTotal)}</td>
                             </tr>
                             ${true ? `
                             <tr>
-                                <td colspan="4" class="text-right font-bold">IVA (${event.iva_percentage ?? 0}%):</td>
-                                <td class="text-right font-bold">${formatPrice(detailTotal * ((event.iva_percentage ?? 0) / 100))}</td>
+                                <td colspan="4" class="text-right" style="font-weight: 900; font-size: 14px;">IVA (${event.iva_percentage ?? 0}%):</td>
+                                <td class="text-right" style="font-weight: 900; font-size: 14px;">${formatPrice(detailTotal * ((event.iva_percentage ?? 0) / 100))}</td>
                             </tr>
                             ` : ''}
                         </tbody>
