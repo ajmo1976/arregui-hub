@@ -1019,6 +1019,12 @@ export default function ServicesView() {
                                     <td colspan="4" class="text-right font-bold">Subtotal Servicio:</td>
                                     <td class="text-right font-bold">${formatPrice(detailTotal)}</td>
                                 </tr>
+                                ${true ? `
+                                <tr>
+                                    <td colspan="4" class="text-right font-bold">IVA (${event.iva_percentage ?? 0}%):</td>
+                                    <td class="text-right font-bold">${formatPrice(detailTotal * ((event.iva_percentage ?? 0) / 100))}</td>
+                                </tr>
+                                ` : ''}
                             </tbody>
                         </table>
 
@@ -1100,7 +1106,7 @@ export default function ServicesView() {
 
                     <div class="grand-total-box">
                         <span class="grand-total-label">${event.status === 'Facturado' ? 'Total Facturado' : (event.status === 'Cobrado' ? 'Total Cobrado' : 'Total a Facturar')} Servicio #${event.id}:</span>
-                        <span class="grand-total-value">${formatPrice(eventTotal)}</span>
+                        <span class="grand-total-value">${formatPrice(event.total_amount || eventTotal)}</span>
                     </div>
 
                     <div class="footer">

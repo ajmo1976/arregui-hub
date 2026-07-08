@@ -357,6 +357,12 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                 <td colspan="4" class="text-right font-bold">Subtotal Servicio:</td>
                                 <td class="text-right font-bold">${formatPrice(detailTotal)}</td>
                             </tr>
+                            ${true ? `
+                            <tr>
+                                <td colspan="4" class="text-right font-bold">IVA (${event.iva_percentage ?? 0}%):</td>
+                                <td class="text-right font-bold">${formatPrice(detailTotal * ((event.iva_percentage ?? 0) / 100))}</td>
+                            </tr>
+                            ` : ''}
                         </tbody>
                     </table>
 
@@ -743,7 +749,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
 
                     <div class="grand-total-box">
                         <span class="grand-total-label">${event.status === 'Facturado' ? 'Total Facturado' : (event.status === 'Cobrado' ? 'Total Cobrado' : 'Total a Facturar')} Servicio #${event.id}:</span>
-                        <span class="grand-total-value">${formatPrice(grandTotal)}</span>
+                        <span class="grand-total-value">${formatPrice(event.total_amount || grandTotal)}</span>
                     </div>
 
                     <div class="footer">
@@ -820,7 +826,17 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
             }
         });
 
-        csvContent += `\r\n;;;;;;;;Total General;${grandTotal};;\r\n`;
+        const ivaPercentage = event.iva_percentage || 0;
+        const ivaAmount = grandTotal * (ivaPercentage / 100);
+        const totalFacturar = event.total_amount || grandTotal;
+
+        if (ivaPercentage > 0) {
+            csvContent += `\r\n;;;;;;;;Subtotal Servicio;${grandTotal};;\r\n`;
+            csvContent += `;;;;;;;;IVA (${ivaPercentage}%);${ivaAmount};;\r\n`;
+            csvContent += `;;;;;;;;Total General;${totalFacturar};;\r\n`;
+        } else {
+            csvContent += `\r\n;;;;;;;;Total General;${grandTotal};;\r\n`;
+        }
 
         // Download trigger
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1152,6 +1168,26 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                                         </div>
                                                     )}
                                                 </div>
+                                                
+                                                {/* Resumen de Costos */}
+                                                {canShowPrices && (
+                                                    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-750 flex flex-col gap-2">
+                                                        <div className="flex justify-between items-center text-xs text-gray-500 font-bold uppercase">
+                                                            <span>Subtotal:</span>
+                                                            <span>{formatPrice(detail.estimated_amount || 0)}</span>
+                                                        </div>
+                                                        {true && (
+                                                            <div className="flex justify-between items-center text-xs text-gray-500 font-bold uppercase">
+                                                                <span>IVA ({event.iva_percentage ?? 0}%):</span>
+                                                                <span>{formatPrice((detail.estimated_amount || 0) * ((event.iva_percentage ?? 0) / 100))}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex justify-between items-center text-sm text-primary font-black uppercase mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                                            <span>Total:</span>
+                                                            <span>{formatPrice((detail.estimated_amount || 0) * (1 + (event.iva_percentage || 0) / 100))}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Requirements & Obs */}

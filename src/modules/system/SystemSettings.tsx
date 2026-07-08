@@ -20,7 +20,8 @@ import {
     ArrowRight,
     CreditCard,
     Activity,
-    Landmark
+    Landmark,
+    Percent
 } from 'lucide-react';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
@@ -38,6 +39,7 @@ const PARAMETER_GROUPS = [
     { id: 'account_type', label: 'Tipos de Cuenta', icon: Layers },
     { id: 'payment_method', label: 'Métodos de Pago', icon: CreditCard },
     { id: 'event_status', label: 'Estados de Evento', icon: Activity },
+    { id: 'tax_rate', label: 'Impuestos (IVA)', icon: Percent },
 ];
 
 export default function SystemSettings() {
@@ -452,7 +454,7 @@ export default function SystemSettings() {
                                         </div>
                                     )}
 
-                                    {['account_type', 'payment_method', 'event_status', 'bank'].includes(activeParamTab) && (
+                                    {['account_type', 'payment_method', 'event_status', 'bank', 'tax_rate'].includes(activeParamTab) && (
                                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                                             <div className="flex justify-between items-center">
                                                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Registros Disponibles</h4>
