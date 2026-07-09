@@ -30,13 +30,13 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
     const [loading, setLoading] = useState(false);
     const [prices, setPrices] = useState<any[]>([]);
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<any>({
         log_date: new Date().toISOString().split('T')[0],
-        lunch_sold: 0,
-        breakfast_revenue: 0,
-        delivery_lunch: 0,
-        delivery_dinner: 0,
-        delivery_night: 0,
+        lunch_sold: '',
+        breakfast_revenue: '',
+        delivery_lunch: '',
+        delivery_dinner: '',
+        delivery_night: '',
         delivery_revenue: 0,
         observations: ''
     });
@@ -60,39 +60,41 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
         }
     };
 
+    // Helper to find the best price for a given type and date
+    const getPriceForDate = (type: 'ESTANDAR' | 'SOBRE_CENA', targetDate: string) => {
+        if (!prices || prices.length === 0) return 0;
+        
+        // Some tolerance for type names (case insensitive or common alternates)
+        const sameTypePrices = prices.filter(p =>
+            p.type.toUpperCase() === type ||
+            (type === 'ESTANDAR' && p.type === 'Estándar') ||
+            (type === 'SOBRE_CENA' && p.type === 'Sobre Cena')
+        );
+
+        if (sameTypePrices.length === 0) return 0;
+
+        // Find prices active ON or BEFORE the target date
+        const pastPrices = sameTypePrices
+            .filter(p => p.effective_date <= targetDate)
+            .sort((a, b) => b.effective_date.localeCompare(a.effective_date));
+
+        if (pastPrices.length > 0) {
+            return pastPrices[0].price;
+        }
+
+        // Fallback: If no price exists BEFORE this date, use the earliest available price
+        // (Assumes the first price recorded is the 'initial' price for all past dates)
+        const earliestPrice = [...sameTypePrices].sort((a, b) => a.effective_date.localeCompare(b.effective_date))[0];
+        return earliestPrice?.price || 0;
+    };
+
+    const standardPrice = getPriceForDate('ESTANDAR', formData.log_date);
+    const nightPrice = getPriceForDate('SOBRE_CENA', formData.log_date);
+    const lunchRevenue = (formData.lunch_sold || 0) * standardPrice;
+    const totalRevenue = (formData.breakfast_revenue || 0) + (formData.delivery_revenue || 0) + lunchRevenue;
+
     // Improved price calculation logic
     useEffect(() => {
-        if (!prices || prices.length === 0) return;
-
-        // Helper to find the best price for a given type and date
-        const getPriceForDate = (type: 'ESTANDAR' | 'SOBRE_CENA', targetDate: string) => {
-            // Some tolerance for type names (case insensitive or common alternates)
-            const sameTypePrices = prices.filter(p =>
-                p.type.toUpperCase() === type ||
-                (type === 'ESTANDAR' && p.type === 'Estándar') ||
-                (type === 'SOBRE_CENA' && p.type === 'Sobre Cena')
-            );
-
-            if (sameTypePrices.length === 0) return 0;
-
-            // Find prices active ON or BEFORE the target date
-            const pastPrices = sameTypePrices
-                .filter(p => p.effective_date <= targetDate)
-                .sort((a, b) => b.effective_date.localeCompare(a.effective_date));
-
-            if (pastPrices.length > 0) {
-                return pastPrices[0].price;
-            }
-
-            // Fallback: If no price exists BEFORE this date, use the earliest available price
-            // (Assumes the first price recorded is the 'initial' price for all past dates)
-            const earliestPrice = [...sameTypePrices].sort((a, b) => a.effective_date.localeCompare(b.effective_date))[0];
-            return earliestPrice?.price || 0;
-        };
-
-        const standardPrice = getPriceForDate('ESTANDAR', formData.log_date);
-        const nightPrice = getPriceForDate('SOBRE_CENA', formData.log_date);
-
         const calculatedRevenue = (formData.delivery_lunch + formData.delivery_dinner) * standardPrice
             + (formData.delivery_night * nightPrice);
 
@@ -131,7 +133,7 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
                 className="bg-white dark:bg-[#151921] w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden border border-white/50 dark:border-gray-800"
             >
                 {/* Header matching System Settings Modal */}
-                <div className="p-10 pb-6 flex items-center justify-between">
+                <div className="p-8 pb-4 flex items-center justify-between">
                     <div>
                         <h3 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase">
                             {isEdit ? 'Modificar' : 'Nuevo'} <span className="text-primary">Registro</span>
@@ -143,7 +145,7 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-10 pt-0 space-y-10 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="p-8 pt-0 space-y-6 max-h-[95vh] overflow-y-auto custom-scrollbar">
 
                     {/* Date Selector - Premium Style */}
                     <div className="space-y-3">
@@ -161,9 +163,9 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-10">
+                    <div className="grid grid-cols-2 gap-6">
                         {/* Comedor Metrics */}
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             <div className="flex items-center gap-2 mb-2 p-1">
                                 <Utensils size={14} className="text-emerald-500" />
                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white">Sección Comedor</h4>
@@ -175,7 +177,7 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
                                         type="number"
                                         className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-primary/10 text-gray-900 dark:text-white tracking-tighter"
                                         value={formData.lunch_sold}
-                                        onChange={e => setFormData({ ...formData, lunch_sold: parseInt(e.target.value) || 0 })}
+                                        onChange={e => setFormData({ ...formData, lunch_sold: e.target.value === '' ? '' : parseInt(e.target.value) })}
                                         required
                                     />
                                 </div>
@@ -191,7 +193,7 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
                                         step="0.01"
                                         className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-primary/10 text-emerald-600 tracking-tighter"
                                         value={formData.breakfast_revenue}
-                                        onChange={e => setFormData({ ...formData, breakfast_revenue: parseFloat(e.target.value) || 0 })}
+                                        onChange={e => setFormData({ ...formData, breakfast_revenue: e.target.value === '' ? '' : parseFloat(e.target.value) })}
                                         required
                                     />
                                 </div>
@@ -199,56 +201,86 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
                         </div>
 
                         {/* Delivery Detail */}
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             <div className="flex items-center gap-2 mb-2 p-1">
                                 <Truck size={14} className="text-blue-500" />
                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white">Sección Delivery</h4>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-gray-400 ml-1">Almuerzos</label>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Almuerzos</label>
                                     <input
                                         type="number"
-                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 rounded-xl font-bold text-xl outline-none focus:ring-2 focus:ring-blue-500/10 text-gray-900 dark:text-white"
+                                        className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-blue-500/10 text-gray-900 dark:text-white tracking-tighter"
                                         value={formData.delivery_lunch}
-                                        onChange={e => setFormData({ ...formData, delivery_lunch: parseInt(e.target.value) || 0 })}
+                                        onChange={e => setFormData({ ...formData, delivery_lunch: e.target.value === '' ? '' : parseInt(e.target.value) })}
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-gray-400 ml-1">Cenas</label>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Cenas</label>
                                     <input
                                         type="number"
-                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 rounded-xl font-bold text-xl outline-none focus:ring-2 focus:ring-blue-500/10 text-gray-900 dark:text-white"
+                                        className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-blue-500/10 text-gray-900 dark:text-white tracking-tighter"
                                         value={formData.delivery_dinner}
-                                        onChange={e => setFormData({ ...formData, delivery_dinner: parseInt(e.target.value) || 0 })}
+                                        onChange={e => setFormData({ ...formData, delivery_dinner: e.target.value === '' ? '' : parseInt(e.target.value) })}
                                     />
                                 </div>
                                 <div className="space-y-2 col-span-2">
-                                    <label className="text-[10px] font-bold text-gray-400 ml-1">Sobre Cenas (Noches)</label>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Sobre Cenas (Noches)</label>
                                     <input
                                         type="number"
-                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 rounded-xl font-bold text-xl outline-none focus:ring-2 focus:ring-blue-500/10 text-gray-900 dark:text-white"
+                                        className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-blue-500/10 text-gray-900 dark:text-white tracking-tighter"
                                         value={formData.delivery_night}
-                                        onChange={e => setFormData({ ...formData, delivery_night: parseInt(e.target.value) || 0 })}
+                                        onChange={e => setFormData({ ...formData, delivery_night: e.target.value === '' ? '' : parseInt(e.target.value) })}
                                     />
                                 </div>
                             </div>
-                            <div className="bg-blue-500/5 p-6 rounded-[2rem] border border-blue-500/10 flex items-center justify-between group-hover:bg-blue-500/10 transition-all shadow-inner">
-                                <div>
-                                    <p className="text-[10px] font-black uppercase text-blue-500 tracking-widest mb-1">Total Facturación Delivery</p>
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-xl font-medium text-blue-300">$</span>
-                                        <span className="text-4xl font-black text-blue-600 tracking-tighter">
-                                            {formData.delivery_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-                                    <p className="text-[9px] font-bold text-blue-400 uppercase tracking-tighter mt-1">
-                                        Eq. {formatPrice(formData.delivery_revenue, currency === 'USD' ? 'VES' : 'USD')}
-                                    </p>
+                        </div>
+                    </div>
+
+                    {/* General Summary Card */}
+                    <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 rounded-[2rem] border border-primary/20 shadow-sm relative overflow-hidden">
+                        <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                            Resumen General del Día
+                        </h4>
+                        
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-2xl border border-white/50 dark:border-gray-700/50 backdrop-blur-sm">
+                                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Total Servicios</p>
+                                <div className="flex items-end gap-2">
+                                    <span className="text-3xl font-black text-gray-900 dark:text-white">
+                                        {(formData.lunch_sold || 0) + (formData.delivery_lunch || 0) + (formData.delivery_dinner || 0) + (formData.delivery_night || 0)}
+                                    </span>
+                                    <span className="text-xs font-medium text-gray-400 mb-1 pb-0.5">platos</span>
                                 </div>
-                                <div className="p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-blue-500/20">
-                                    <DollarSign size={24} className="text-blue-500" />
+                            </div>
+                            
+                            <div className="bg-blue-500/5 dark:bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20 backdrop-blur-sm">
+                                <p className="text-[10px] font-bold text-blue-500 uppercase mb-1">Total Delivery</p>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-lg font-medium text-blue-400">$</span>
+                                    <span className="text-3xl font-black text-blue-600 tracking-tighter">
+                                        {formData.delivery_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
                                 </div>
+                                <p className="text-[9px] font-bold text-blue-400 uppercase tracking-tighter mt-1">
+                                    Eq. {formatPrice(formData.delivery_revenue, currency === 'USD' ? 'VES' : 'USD')}
+                                </p>
+                            </div>
+
+                            <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-2xl border border-white/50 dark:border-gray-700/50 backdrop-blur-sm">
+                                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Ingreso Total</p>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-lg font-medium text-primary/70">$</span>
+                                    <span className="text-3xl font-black text-primary tracking-tighter">
+                                        {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <p className="text-[9px] font-bold text-primary/60 uppercase tracking-tighter mt-1">
+                                    Eq. {formatPrice(totalRevenue, currency === 'USD' ? 'VES' : 'USD')}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -257,9 +289,9 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
                     <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Observaciones / Incidencias</label>
                         <textarea
-                            rows={3}
+                            rows={2}
                             placeholder="Anota cualquier detalle relevante del día..."
-                            className="w-full px-8 py-6 bg-gray-50 dark:bg-gray-900 border-none rounded-3xl font-medium outline-none focus:ring-2 focus:ring-primary/10 text-gray-700 dark:text-gray-300 resize-none shadow-inner"
+                            className="w-full px-8 py-4 bg-gray-50 dark:bg-gray-900 border-none rounded-3xl font-medium outline-none focus:ring-2 focus:ring-primary/10 text-gray-700 dark:text-gray-300 resize-none shadow-inner transition-all hover:bg-gray-100 dark:hover:bg-gray-800"
                             value={formData.observations}
                             onChange={e => setFormData({ ...formData, observations: e.target.value })}
                         />
@@ -269,14 +301,14 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-5 rounded-3xl font-black uppercase text-[10px] tracking-widest text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-all border border-gray-100 dark:border-gray-800"
+                            className="flex-1 py-4 rounded-3xl font-black uppercase text-[10px] tracking-widest text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-all border border-gray-100 dark:border-gray-800"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-[2] flex items-center justify-center gap-3 bg-primary hover:bg-primary-dark text-white py-5 rounded-3xl font-black uppercase text-xs tracking-widest shadow-2xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                            className="flex-[2] flex items-center justify-center gap-3 bg-primary hover:bg-primary-dark text-white py-4 rounded-3xl font-black uppercase text-xs tracking-widest shadow-2xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
                         >
                             {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                             {isEdit ? 'Actualizar Datos' : 'Confirmar Registro'}

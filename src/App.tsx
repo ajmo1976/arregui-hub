@@ -93,6 +93,19 @@ export default function App() {
     const [showLanding, setShowLanding] = useState(true);
 
     useEffect(() => {
+        const checkScreenSize = () => {
+            if (window.innerWidth < 1024) {
+                setIsSidebarOpen(false);
+            } else {
+                setIsSidebarOpen(true);
+            }
+        };
+        checkScreenSize();
+        window.addEventListener('resize', checkScreenSize);
+        return () => window.removeEventListener('resize', checkScreenSize);
+    }, []);
+
+    useEffect(() => {
         if (!isAuthenticated) {
             setActiveModule('menu');
         }
@@ -200,14 +213,25 @@ export default function App() {
                     animate={{ width: isSidebarOpen ? 280 : 80 }}
                     className="h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-20"
                 >
-                    <div className="p-6 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-900/20">
-                            <UtensilsCrossed size={22} />
+                    <div className="p-6 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-900/20 flex-shrink-0">
+                                <UtensilsCrossed size={22} />
+                            </div>
+                            {isSidebarOpen && (
+                                <span className="font-bold text-xl tracking-tight text-gray-900 dark:text-white whitespace-nowrap">
+                                    Arregui <span className="text-primary">Hub</span>
+                                </span>
+                            )}
                         </div>
                         {isSidebarOpen && (
-                            <span className="font-bold text-xl tracking-tight text-gray-900 dark:text-white">
-                                Arregui <span className="text-primary">Hub</span>
-                            </span>
+                            <button
+                                onClick={() => setIsSidebarOpen(false)}
+                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500"
+                                title="Ocultar menú"
+                            >
+                                <X size={20} />
+                            </button>
                         )}
                     </div>
 
@@ -216,8 +240,8 @@ export default function App() {
                             onClick={() => setActiveModule('menu')}
                             className="w-full flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-700/50 text-gray-500 rounded-xl hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200"
                         >
-                            <LayoutDashboard size={18} />
-                            {isSidebarOpen && <span className="text-xs font-bold uppercase tracking-widest">Menú Principal</span>}
+                            <LayoutDashboard size={18} className="flex-shrink-0" />
+                            {isSidebarOpen && <span className="text-xs font-bold uppercase tracking-widest whitespace-nowrap">Menú Principal</span>}
                         </button>
                     </div>
 
