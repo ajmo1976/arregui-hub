@@ -128,6 +128,7 @@ export default function Dashboard() {
         {
             title: 'Ingresos Almuerzos',
             value: formatPrice(data?.lunch_revenue || 0),
+            subValue: data?.lunches ? `${data.lunches} Almuerzos` : '',
             trend: data?.trends.lunches || '+0%',
             icon: Utensils,
             color: 'text-emerald-500',
@@ -135,8 +136,9 @@ export default function Dashboard() {
             dataKey: 'income_lunch'
         },
         {
-            title: 'Fact. Delivery',
+            title: 'Facturación de Delivery',
             value: formatPrice(data?.delivery_revenue || 0),
+            subValue: '',
             trend: data?.trends.revenue || '+0%',
             icon: Truck,
             color: 'text-blue-500',
@@ -144,8 +146,9 @@ export default function Dashboard() {
             dataKey: 'income_del'
         },
         {
-            title: 'Fact. Servicios',
-            value: `${formatPrice(data?.services_revenue || 0)} (${data?.services_count || 0})`,
+            title: 'Facturación de Servicios',
+            value: formatPrice(data?.services_revenue || 0),
+            subValue: `${data?.services_count || 0} Servicios`,
             trend: data?.trends.services || '+0%',
             icon: Calendar,
             color: 'text-indigo-500',
@@ -153,10 +156,11 @@ export default function Dashboard() {
             dataKey: 'income_srv'
         },
         {
-            title: 'Fact. Desayunos',
+            title: 'Facturación Desayunos',
             value: formatPrice(data?.breakfast_revenue || 0),
+            subValue: '',
             trend: data?.trends.revenue || '+0%',
-            icon: Coffee, // Need to import Coffee or use another icon
+            icon: Coffee,
             color: 'text-amber-500',
             bg: 'bg-amber-50',
             dataKey: 'income_brk'
@@ -257,36 +261,33 @@ export default function Dashboard() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.1 }}
-                            className="group bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] dark:shadow-none flex flex-col gap-4 overflow-hidden"
+                            className="group bg-white dark:bg-gray-800 p-6 rounded-[1.5rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col gap-5 overflow-hidden"
                         >
-                            <div className="flex items-start justify-between">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{stat.title}</p>
-                                    <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter">{stat.value}</h3>
-                                </div>
-                                <div className={`p-2.5 rounded-xl ${stat.bg} dark:bg-opacity-10 transition-transform group-hover:scale-110`}>
-                                    <stat.icon size={20} className={stat.color} />
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-[15px] font-medium text-gray-500 dark:text-gray-400">{stat.title}</h4>
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm">
+                                    <stat.icon size={14} className={stat.color} />
+                                    <span className="text-[12px] font-bold text-gray-700 dark:text-gray-300 capitalize">
+                                        {range === 'custom' ? 'Personalizado' : rangeOptions.find(o => o.value === range)?.label}
+                                    </span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className={`flex items-center gap-0.5 text-[10px] font-black ${stat.trend.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'} uppercase tracking-tighter`}>
-                                    {stat.trend.startsWith('+') ? <TrendingUp size={10} /> : <TrendingDown size={10} />} {stat.trend}
+                            
+                            <div className="flex items-baseline gap-2.5">
+                                <h3 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">{stat.value}</h3>
+                                {stat.subValue && (
+                                    <span className="text-xl font-medium text-gray-400 dark:text-gray-500 tracking-tight">{stat.subValue}</span>
+                                )}
+                            </div>
+
+                            <div className="h-px w-full bg-gray-100 dark:bg-gray-700/50" />
+
+                            <div className="flex items-center gap-1.5">
+                                <span className={`flex items-center gap-1 text-sm font-bold ${stat.trend.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                    {stat.trend.startsWith('+') ? <TrendingUp size={16} strokeWidth={2.5} /> : <TrendingDown size={16} strokeWidth={2.5} />}
+                                    {stat.trend}
                                 </span>
-                                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">{getComparisonLabel()}</span>
-                            </div>
-                            <div className="mt-2 h-10 w-full opacity-60 group-hover:opacity-100 transition-opacity">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={data?.chart_data.slice(-7)}>
-                                        <Area
-                                            type="monotone"
-                                            dataKey={stat.dataKey}
-                                            stroke={stat.trend.startsWith('+') ? '#10b981' : '#f43f5e'}
-                                            fill={stat.trend.startsWith('+') ? '#dcfce7' : '#fee2e2'}
-                                            strokeWidth={2.5}
-                                            dot={false}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{getComparisonLabel()}</span>
                             </div>
                         </motion.div>
                     ))}
