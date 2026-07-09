@@ -145,7 +145,7 @@ export default function Dashboard() {
         },
         {
             title: 'Fact. Servicios',
-            value: formatPrice(data?.services_revenue || 0),
+            value: `${formatPrice(data?.services_revenue || 0)} (${data?.services_count || 0})`,
             trend: data?.trends.services || '+0%',
             icon: Calendar,
             color: 'text-indigo-500',
@@ -372,7 +372,10 @@ export default function Dashboard() {
                                                                 </div>
                                                                 <div className="flex justify-between items-center text-xs">
                                                                     <span className="font-bold text-indigo-500">Servicios:</span>
-                                                                    <span className="font-black text-gray-900 dark:text-white">{formatPrice(d.income_srv || 0)}</span>
+                                                                    <span className="font-black text-gray-900 dark:text-white">
+                                                                        {canShowPrices ? formatPrice(d.income_srv || 0) : '***'} 
+                                                                        <span className="text-gray-400 font-normal ml-1">({d.services_count || 0})</span>
+                                                                    </span>
                                                                 </div>
                                                                 <div className="pt-2.5 mt-2.5 border-t border-gray-50 flex justify-between items-center">
                                                                     <span className="text-xs font-black uppercase tracking-widest text-gray-400">Total:</span>

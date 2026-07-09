@@ -207,74 +207,78 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex-shrink-0"
                         >
-                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Título del Evento</label>
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5">
+                                <div className="space-y-1.5 md:col-span-2 lg:col-span-5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Título del Evento</label>
                                     <div className="relative group">
-                                        <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
+                                        <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={16} />
                                         <input
                                             type="text"
                                             placeholder="Ej. Conferencia Anual"
-                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm"
+                                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all font-medium text-sm"
                                             value={eventData.title}
                                             onChange={e => setEventData({ ...eventData, title: e.target.value })}
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Responsable *</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Cliente / Solicitante"
-                                        className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm"
-                                        value={eventData.responsible}
-                                        onChange={e => setEventData({ ...eventData, responsible: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Empresa</label>
+                                <div className="space-y-1.5 md:col-span-1 lg:col-span-4">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Responsable *</label>
                                     <div className="relative group">
-                                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
+                                        <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder="Cliente / Solicitante"
+                                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all font-medium text-sm"
+                                            value={eventData.responsible}
+                                            onChange={e => setEventData({ ...eventData, responsible: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5 md:col-span-1 lg:col-span-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Empresa</label>
+                                    <div className="relative group">
+                                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={16} />
                                         <input
                                             type="text"
                                             placeholder="Ej. Acme Corp"
-                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm"
+                                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all font-medium text-sm"
                                             value={eventData.company}
                                             onChange={e => setEventData({ ...eventData, company: e.target.value })}
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Centro de Costo</label>
+                                
+                                <div className="space-y-1.5 md:col-span-1 lg:col-span-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Centro de Costo</label>
                                     <div className="relative group">
-                                        <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
+                                        <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={16} />
                                         <input
                                             type="text"
                                             placeholder="Ej. TCN-10200"
-                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm"
+                                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all font-medium text-sm"
                                             value={eventData.cost_center}
                                             onChange={e => setEventData({ ...eventData, cost_center: e.target.value })}
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Fecha de Solicitud</label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                                <div className="space-y-1.5 md:col-span-1 lg:col-span-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Fecha de Solicitud</label>
+                                    <div className="relative group">
+                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={16} />
                                         <input
                                             type="date"
-                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm"
+                                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all font-medium text-sm"
                                             value={eventData.request_date}
                                             onChange={e => setEventData({ ...eventData, request_date: e.target.value })}
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1 text-right">Estado General</label>
-                                    <div className="relative">
-                                        <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                                <div className="space-y-1.5 md:col-span-1 lg:col-span-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Estado General</label>
+                                    <div className="relative group">
+                                        <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={16} />
                                         <select
-                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium appearance-none text-sm"
+                                            className="w-full pl-10 pr-8 py-2.5 bg-gray-50/80 dark:bg-gray-900/80 border border-gray-200/50 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all font-medium appearance-none text-sm"
                                             value={eventData.status}
                                             onChange={e => setEventData({ 
                                                 ...eventData, 
@@ -288,34 +292,22 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                                         </select>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Fecha de Estado</label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                                        <input
-                                            type="date"
-                                            readOnly
-                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-100/50 dark:bg-gray-900 border border-transparent dark:border-gray-700 rounded-2xl font-medium outline-none cursor-not-allowed text-sm"
-                                            value={eventData.status_date}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-2 lg:col-span-2">
-                                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Número de Factura</label>
+                                <div className="space-y-1.5 md:col-span-1 lg:col-span-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Número de Factura</label>
                                     <div className="relative group">
-                                        <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary transition-colors" size={18} />
+                                        <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={16} />
                                         <input
                                             type="text"
                                             placeholder={
                                                 (eventData.status === 'Facturado' || eventData.status === 'Cobrado')
                                                     ? "Ej. FAC-00123"
-                                                    : "Se habilita al cambiar a Facturado/Cobrado"
+                                                    : "Solo para Facturados"
                                             }
                                             disabled={eventData.status !== 'Facturado' && eventData.status !== 'Cobrado'}
-                                            className={`w-full pl-11 pr-4 py-3.5 border border-transparent dark:border-gray-700 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm ${
+                                            className={`w-full pl-10 pr-4 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-sm ${
                                                 (eventData.status === 'Facturado' || eventData.status === 'Cobrado')
-                                                    ? "bg-white dark:bg-gray-900 focus:bg-white"
-                                                    : "bg-gray-100/50 dark:bg-gray-800 cursor-not-allowed text-gray-400"
+                                                    ? "bg-white dark:bg-gray-900 border border-gray-200/50 dark:border-gray-700 focus:border-primary/30"
+                                                    : "bg-gray-100/50 dark:bg-gray-800 border border-transparent cursor-not-allowed text-gray-400"
                                             }`}
                                             value={eventData.invoice_number || ''}
                                             onChange={e => setEventData({ ...eventData, invoice_number: e.target.value })}

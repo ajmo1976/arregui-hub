@@ -1229,16 +1229,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                 {new Date(event.request_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
                             </span>
                         </div>
-                        {event.status_date && (
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                                    {event.status === 'Facturado' ? 'Facturado el' : (event.status === 'Cobrado' ? 'Cobrado el' : 'Estado modificado el')}
-                                </span>
-                                <span className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">
-                                    {new Date(event.status_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
-                                </span>
-                            </div>
-                        )}
+
                     </div>
                     <div className="flex items-center gap-3">
                         <button
