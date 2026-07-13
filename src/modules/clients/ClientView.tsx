@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Users, Search, Filter, Download,
-    MoreHorizontal, Mail, Phone, MapPin,
-    Shield, CheckCircle2, UserPlus, Loader2, Edit2, Trash2, Settings
+    Users, Search, Filter, Download, Mail, Phone, MapPin,
+    Shield, CheckCircle2, UserPlus, Edit2, Trash2
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 import UserForm from './UserForm';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, User, Phone, Mail, MapPin, Edit2, Trash2, CheckCircle2, XCircle, FileText, ExternalLink, CreditCard, Eye } from 'lucide-react';
+import { Search, Filter, Download, Plus, User, Phone, Edit2, Trash2, CheckCircle2, XCircle, FileText, ExternalLink, CreditCard, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { inventoryApi, BACKEND_URL } from '../../services/api';
 import { toast } from 'sonner';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Building2, User, Phone, Mail, MapPin, Tag, CheckCircle2, CreditCard, FileCheck, FileText, Upload, Trash2, Plus, Loader2 } from 'lucide-react';
+import { X, Save, Building2, User, Phone, Mail, MapPin, CheckCircle2, CreditCard, FileCheck, FileText, Upload, Trash2, Plus, Loader2 } from 'lucide-react';
 import { inventoryApi, BACKEND_URL } from '../../services/api';
 import { toast } from 'sonner';
 

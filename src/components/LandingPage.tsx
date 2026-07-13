@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { UtensilsCrossed, ArrowRight, ShieldCheck, Zap, Lock } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Zap, Lock } from 'lucide-react';
 
 const LandingPage = ({ onLoginClick }: { onLoginClick: () => void }) => {
     return (

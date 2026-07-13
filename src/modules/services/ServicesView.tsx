@@ -6,7 +6,6 @@ import {
     MapPin,
     Users,
     Filter,
-    ChevronRight,
     Loader2,
     RefreshCw,
     MoreVertical,
@@ -18,7 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import api, { inventoryApi } from '../../services/api';
+import { inventoryApi } from '../../services/api';
 import ServiceForm from './ServiceForm';
 import MenuManagement from './MenuManagement';
 import ServiceDetailView from './ServiceDetailView';

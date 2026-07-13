@@ -3,13 +3,9 @@ import {
     X,
     Calendar,
     Utensils,
-    DollarSign,
     Truck,
-    MessageSquare,
     Save,
     Loader2,
-    Plus,
-    Clock,
     ArrowRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     X, Shield, Plus, Edit2, Trash2,
-    Loader2, AlertTriangle, CheckCircle2,
+    Loader2, AlertTriangle,
     Lock, LayoutDashboard, Package, Truck, Users,
     Settings, ScrollText, Calendar, Utensils
 } from 'lucide-react';

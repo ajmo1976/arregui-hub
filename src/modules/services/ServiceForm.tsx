@@ -9,12 +9,11 @@ import {
     Save,
     Loader2,
     Briefcase,
-    ClipboardCheck,
     Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import api, { inventoryApi } from '../../services/api';
+import { inventoryApi } from '../../services/api';
 import ServiceDetailCard from './ServiceDetailCard';
 import { useCurrency } from '../../contexts/CurrencyContext';
 

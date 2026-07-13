@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Receipt, CreditCard, ChevronRight, TrendingUp, AlertCircle, CheckCircle2, FileText, Download, Wallet, ArrowUpRight, Eye, Plus, Loader2, Landmark, Image, Upload } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { X, Calendar, Receipt, CreditCard, TrendingUp, AlertCircle, CheckCircle2, FileText, Wallet, ArrowUpRight, Eye, Plus, Loader2, Image, Upload } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { inventoryApi, BACKEND_URL } from '../../services/api';
 import { toast } from 'sonner';
 import { useCurrency } from '../../contexts/CurrencyContext';

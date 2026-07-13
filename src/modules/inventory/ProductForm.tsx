@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, Info, LayoutGrid, BarChart3, Tag, Warehouse, Hash, AlignLeft, Scale } from 'lucide-react';
+import { X, Loader2, Info, LayoutGrid, BarChart3, Tag, Hash, AlignLeft } from 'lucide-react';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 import { useCurrency } from '../../contexts/CurrencyContext';

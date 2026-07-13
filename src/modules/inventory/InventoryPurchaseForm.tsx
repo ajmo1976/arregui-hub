@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, Plus, Trash2, Search, FileText, Calendar, Hash, Truck, Package, Warehouse as WarehouseIcon } from 'lucide-react';
+import { X, Loader2, Plus, Trash2, FileText, Calendar, Hash, Truck, Package } from 'lucide-react';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 import ProductSearchSelect from '../../components/ProductSearchSelect';

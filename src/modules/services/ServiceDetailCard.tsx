@@ -17,7 +17,7 @@ import {
     ChevronUp
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import api, { inventoryApi } from '../../services/api';
+import { inventoryApi } from '../../services/api';
 import { useCurrency } from '../../contexts/CurrencyContext';
 
 interface ServiceDetailCardProps {

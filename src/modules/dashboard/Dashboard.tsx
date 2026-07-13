@@ -1,27 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
-    LayoutDashboard,
     RefreshCw,
     TrendingUp,
     TrendingDown,
     Package,
     Utensils,
-    DollarSign,
     Truck,
     Calendar,
     Users,
     AlertTriangle,
-    ArrowUpRight,
     ShoppingBag,
     Loader2,
-    Target,
-    Activity,
     ChevronRight,
     Coffee
 } from 'lucide-react';
 import {
-    BarChart,
-    Bar,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -128,7 +121,6 @@ export default function Dashboard() {
         {
             title: 'Ingresos Almuerzos',
             value: formatPrice(data?.lunch_revenue || 0),
-            subValue: data?.lunches ? `${data.lunches} Almuerzos` : '',
             trend: data?.trends.lunches || '+0%',
             icon: Utensils,
             color: 'text-emerald-500',
@@ -136,9 +128,17 @@ export default function Dashboard() {
             dataKey: 'income_lunch'
         },
         {
+            title: 'Cantidad de Platos',
+            value: (data?.lunches || 0).toString(),
+            trend: data?.trends.lunches || '+0%',
+            icon: Utensils,
+            color: 'text-emerald-500',
+            bg: 'bg-emerald-50',
+            dataKey: 'qty_lunch'
+        },
+        {
             title: 'Facturación de Delivery',
             value: formatPrice(data?.delivery_revenue || 0),
-            subValue: '',
             trend: data?.trends.revenue || '+0%',
             icon: Truck,
             color: 'text-blue-500',
@@ -148,7 +148,6 @@ export default function Dashboard() {
         {
             title: 'Facturación de Servicios',
             value: formatPrice(data?.services_revenue || 0),
-            subValue: `${data?.services_count || 0} Servicios`,
             trend: data?.trends.services || '+0%',
             icon: Calendar,
             color: 'text-indigo-500',
@@ -156,9 +155,17 @@ export default function Dashboard() {
             dataKey: 'income_srv'
         },
         {
+            title: 'Cantidad de Servicios',
+            value: (data?.services_count || 0).toString(),
+            trend: data?.trends.services || '+0%',
+            icon: Calendar,
+            color: 'text-indigo-500',
+            bg: 'bg-indigo-50',
+            dataKey: 'qty_srv'
+        },
+        {
             title: 'Facturación Desayunos',
             value: formatPrice(data?.breakfast_revenue || 0),
-            subValue: '',
             trend: data?.trends.revenue || '+0%',
             icon: Coffee,
             color: 'text-amber-500',
@@ -254,7 +261,7 @@ export default function Dashboard() {
 
             {/* Fila 1: KPIs Financieros (Only if authorized) */}
             {canShowPrices && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {mainStats.map((stat, idx) => (
                         <motion.div
                             key={idx}
@@ -275,9 +282,6 @@ export default function Dashboard() {
                             
                             <div className="flex items-baseline gap-2.5">
                                 <h3 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">{stat.value}</h3>
-                                {stat.subValue && (
-                                    <span className="text-xl font-medium text-gray-400 dark:text-gray-500 tracking-tight">{stat.subValue}</span>
-                                )}
                             </div>
 
                             <div className="h-px w-full bg-gray-100 dark:bg-gray-700/50" />

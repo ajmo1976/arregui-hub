@@ -4,7 +4,6 @@ import {
     Shield, Lock, Loader2, Save,
     CheckCircle2, AlertCircle, UserPlus
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 

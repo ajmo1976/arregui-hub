@@ -1,7 +1,6 @@
 import React from 'react';
 import { useCurrency } from '../contexts/CurrencyContext';
 import { DollarSign, TrendingUp } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 interface CurrencySwitcherProps {
     variant?: 'dark' | 'light';

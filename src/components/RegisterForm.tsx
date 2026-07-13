@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, UserPlus, Loader2, ArrowLeft } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { inventoryApi } from '../services/api';
 import { toast } from 'sonner';
 

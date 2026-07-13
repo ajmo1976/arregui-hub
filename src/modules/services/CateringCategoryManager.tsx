@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Loader2, LayoutGrid, Edit3, Check, Save } from 'lucide-react';
+import { X, Plus, Trash2, Loader2, LayoutGrid, Edit3, Check } from 'lucide-react';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 

@@ -6,8 +6,6 @@ import {
     Clock,
     Users,
     MapPin,
-    Filter,
-    Search,
     Loader2,
     Printer
 } from 'lucide-react';
@@ -23,8 +21,7 @@ import {
     isSameDay,
     addDays,
     eachDayOfInterval,
-    parseISO,
-    startOfDay
+    parseISO
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
