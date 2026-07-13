@@ -94,7 +94,7 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
         const calculatedRevenue = (formData.delivery_lunch + formData.delivery_dinner) * standardPrice
             + (formData.delivery_night * nightPrice);
 
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
             delivery_revenue: calculatedRevenue
         }));

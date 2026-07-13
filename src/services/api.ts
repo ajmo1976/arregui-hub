@@ -31,7 +31,7 @@ export const downloadFile = async (url: string, params?: any, defaultFilename?: 
             }
         }
 
-        const blob = new Blob([response.data], { type: response.headers['content-type'] });
+        const blob = new Blob([response.data], { type: response.headers['content-type'] as string });
         const downloadUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = downloadUrl;
