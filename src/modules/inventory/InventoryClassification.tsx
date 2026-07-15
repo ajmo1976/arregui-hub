@@ -259,28 +259,41 @@ export default function InventoryClassification() {
 
             {/* Modal Form */}
             {showForm && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-850 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Nuevo {tabs.find(t => t.id === activeTab)?.label}</h3>
-                            <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                                    <Plus size={24} strokeWidth={2.5} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Nuevo {tabs.find(t => t.id === activeTab)?.label}</h3>
+                                    <p className="text-xs font-medium text-gray-500 mt-0.5">Complete la información requerida</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowForm(false)} className="p-3 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-2xl transition-all text-gray-400">
+                                <X size={24} />
+                            </button>
                         </div>
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                            
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Nombre</label>
+                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider ml-1">Nombre</label>
                                 <input
                                     required
-                                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-transparent outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary dark:text-white text-sm font-medium transition-all"
                                     value={newItem.name}
+                                    placeholder={`Ej. ${activeTab === 'categories' ? 'Electrónica' : '...'}`}
                                     onChange={e => setNewItem({ ...newItem, name: e.target.value })}
                                 />
                             </div>
 
                             {activeTab === 'categories' && (
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Categoría Principal (Opcional)</label>
+                                    <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider ml-1">Categoría Principal (Opcional)</label>
                                     <select
-                                        className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-transparent outline-none focus:ring-2 focus:ring-primary dark:text-white dark:bg-gray-800"
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary dark:text-white text-sm font-medium transition-all appearance-none"
                                         value={newItem.parent_id}
                                         onChange={e => setNewItem({ ...newItem, parent_id: e.target.value })}
                                     >
@@ -292,12 +305,12 @@ export default function InventoryClassification() {
                                 </div>
                             )}
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">
+                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider ml-1">
                                     {activeTab === 'warehouses' ? 'Ubicación' : activeTab === 'reasons' ? 'Tipo de Flujo' : 'Descripción'}
                                 </label>
                                 {activeTab === 'reasons' ? (
                                     <select
-                                        className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-transparent outline-none focus:ring-2 focus:ring-primary dark:text-white dark:bg-gray-800"
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary dark:text-white text-sm font-medium transition-all appearance-none"
                                         value={newItem.location}
                                         onChange={e => setNewItem({ ...newItem, location: e.target.value })}
                                         required
@@ -308,21 +321,31 @@ export default function InventoryClassification() {
                                     </select>
                                 ) : (
                                     <input
-                                        className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-transparent outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary dark:text-white text-sm font-medium transition-all"
                                         value={activeTab === 'warehouses' ? newItem.location : newItem.description}
+                                        placeholder={`Ej. ${activeTab === 'warehouses' ? 'Estante A-12' : 'Breve descripción...'}`}
                                         onChange={e => activeTab === 'warehouses'
                                             ? setNewItem({ ...newItem, location: e.target.value })
                                             : setNewItem({ ...newItem, description: e.target.value })}
                                     />
                                 )}
                             </div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full py-3 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 mt-4"
-                            >
-                                {loading ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} /> Guardar</>}
-                            </button>
+                            
+                            <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-700 mt-6">
+                                <button
+                                    type="button" onClick={() => setShowForm(false)}
+                                    className="px-6 py-3 text-sm font-bold text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="px-8 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} Guardar
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>

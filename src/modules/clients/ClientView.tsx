@@ -3,7 +3,7 @@ import {
     Users, Search, Filter, Download, Mail, Phone, MapPin,
     Shield, CheckCircle2, UserPlus, Edit2, Trash2
 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 import UserForm from './UserForm';
@@ -17,6 +17,11 @@ export default function ClientView() {
     const [showForm, setShowForm] = useState(false);
     const [showRoles, setShowRoles] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any>(null);
+    
+    // Filtros
+    const [showFilters, setShowFilters] = useState(false);
+    const [roleFilter, setRoleFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
 
     const fetchRoles = async () => {
         try {
@@ -48,11 +53,50 @@ export default function ClientView() {
         fetchRoles();
     }, []);
 
-    const filteredUsers = users.filter(u =>
-        u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.role_name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredUsers = users.filter(u => {
+        const matchesSearch = u.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.role_name?.toLowerCase().includes(searchQuery.toLowerCase());
+            
+        const matchesRole = roleFilter ? u.role_name === roleFilter : true;
+        const matchesStatus = statusFilter ? (statusFilter === 'active' ? u.is_active : !u.is_active) : true;
+        
+        return matchesSearch && matchesRole && matchesStatus;
+    });
+
+    const handleExport = () => {
+        if (filteredUsers.length === 0) {
+            toast.error('No hay datos para exportar');
+            return;
+        }
+        
+        const headers = ['Nombre', 'Email', 'Rol', 'Teléfono', 'Dirección', 'Estado'];
+        const csvData = filteredUsers.map(u => [
+            `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+            u.email || '',
+            u.role_name || '',
+            u.phone || '',
+            u.address || '',
+            u.is_active ? 'Activo' : 'Inactivo'
+        ]);
+        
+        // Agregar BOM para UTF-8 en Excel
+        const csvContent = "\\uFEFF" + [
+            headers.join(','),
+            ...csvData.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        ].join('\\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `usuarios_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Archivo exportado exitosamente');
+    };
 
     const getRoleColor = (roleStr: string) => {
         const role = roleStr?.toUpperCase();
@@ -80,11 +124,24 @@ export default function ClientView() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <button className="p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl text-gray-500 hover:bg-gray-50 shadow-sm transition-all hidden sm:flex items-center gap-2">
+                    <button 
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`p-3 border rounded-2xl hidden sm:flex items-center gap-2 shadow-sm transition-all ${
+                            showFilters || roleFilter || statusFilter 
+                            ? 'bg-primary/5 border-primary/20 text-primary hover:bg-primary/10' 
+                            : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-500 hover:bg-gray-50'
+                        }`}
+                    >
                         <Filter size={18} />
                         <span className="text-sm font-bold">Filtros</span>
+                        {(roleFilter || statusFilter) && (
+                            <span className="w-2 h-2 rounded-full bg-primary ml-1"></span>
+                        )}
                     </button>
-                    <button className="p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl text-gray-500 hover:bg-gray-50 shadow-sm transition-all hidden sm:flex items-center gap-2">
+                    <button 
+                        onClick={handleExport}
+                        className="p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl text-gray-500 hover:bg-gray-50 hover:text-primary transition-all hidden sm:flex items-center gap-2"
+                    >
                         <Download size={18} />
                         <span className="text-sm font-bold">Exportar</span>
                     </button>
@@ -104,6 +161,57 @@ export default function ClientView() {
                     </button>
                 </div>
             </div>
+
+            {/* Filter Panel */}
+            <AnimatePresence>
+                {showFilters && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="p-4 bg-white dark:bg-gray-800 rounded-[1.5rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-wrap items-center gap-4">
+                            <div className="flex flex-col gap-1.5 min-w-[200px]">
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Rol de Usuario</label>
+                                <select 
+                                    className="px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary text-sm font-medium transition-all"
+                                    value={roleFilter}
+                                    onChange={(e) => setRoleFilter(e.target.value)}
+                                >
+                                    <option value="">Todos los roles</option>
+                                    {roles.map(r => (
+                                        <option key={r.id} value={r.name}>{r.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1.5 min-w-[200px]">
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Estado</label>
+                                <select 
+                                    className="px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary text-sm font-medium transition-all"
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                >
+                                    <option value="">Todos los estados</option>
+                                    <option value="active">Activo</option>
+                                    <option value="inactive">Inactivo</option>
+                                </select>
+                            </div>
+                            
+                            <div className="ml-auto mt-6">
+                                {(roleFilter || statusFilter) && (
+                                    <button 
+                                        onClick={() => { setRoleFilter(''); setStatusFilter(''); }}
+                                        className="text-sm font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                    >
+                                        Limpiar filtros
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-xl shadow-gray-200/20 dark:shadow-none overflow-hidden">
                 <div className="overflow-x-auto overflow-y-visible">
