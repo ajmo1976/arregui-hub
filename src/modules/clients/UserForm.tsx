@@ -26,7 +26,8 @@ export default function UserForm({ onClose, onSuccess, initialData, roles }: Use
         role_id: initialData?.role_id || '',
         is_active: initialData?.is_active ?? true,
         password: '',
-        is_superuser: initialData?.is_superuser || false
+        is_superuser: initialData?.is_superuser || false,
+        receive_service_emails: initialData?.receive_service_emails ?? true
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -214,6 +215,28 @@ export default function UserForm({ onClose, onSuccess, initialData, roles }: Use
                                     <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${formData.is_active ? 'translate-x-6' : 'translate-x-0'}`} />
                                 </button>
                             </div>
+
+                            {/* Notificaciones Toggle (Solo para Admins) */}
+                            {formData.is_superuser && (
+                                <div className="flex items-center justify-between p-5 bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-900/50 border border-blue-100 dark:border-blue-800 rounded-2xl mt-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${formData.receive_service_emails ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                                            <Mail size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">Notificaciones de Servicios</div>
+                                            <div className="text-xs font-medium text-gray-500">{formData.receive_service_emails ? 'Recibiendo correos' : 'Correos desactivados'}</div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, receive_service_emails: !formData.receive_service_emails })}
+                                        className={`w-12 h-6 rounded-full transition-all relative ${formData.receive_service_emails ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                    >
+                                        <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${formData.receive_service_emails ? 'translate-x-6' : 'translate-x-0'}`} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 

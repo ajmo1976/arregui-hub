@@ -7,6 +7,7 @@ interface User {
     role_name: string;
     allowed_modules: string[];
     is_superuser: boolean;
+    receive_service_emails?: boolean;
 }
 
 interface AuthState {
