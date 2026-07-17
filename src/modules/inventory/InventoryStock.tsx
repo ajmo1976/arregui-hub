@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
-import { Loader2, AlertTriangle, TrendingUp, DollarSign, PackageCheck, FilePlus, ArrowRightLeft, Search, Filter, Download } from 'lucide-react';
+import { Loader2, AlertTriangle, TrendingUp, DollarSign, PackageCheck, FilePlus, ArrowRightLeft, Search, Filter, Download, Scan } from 'lucide-react';
 import InventoryPurchaseForm from './InventoryPurchaseForm';
 import StockAdjustmentModal from './StockAdjustmentModal';
+import BarcodeScannerModal from '../../components/BarcodeScannerModal';
 
 // Mock user role for demonstration (ideally comes from context)
 const currentUser = { role: 'Admin' };
@@ -18,6 +19,7 @@ export default function InventoryStock() {
     const [categoryFilter, setCategoryFilter] = useState('');
     const [categories, setCategories] = useState<any[]>([]);
     const [showPurchaseForm, setShowPurchaseForm] = useState(false);
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
 
     const fetchData = async () => {
@@ -81,10 +83,17 @@ export default function InventoryStock() {
                         <input
                             type="text"
                             placeholder="Buscar productos..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all dark:text-white"
+                            className="w-full pl-10 pr-12 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all dark:text-white"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
+                        <button
+                            onClick={() => setIsScannerOpen(true)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                            title="Escanear código"
+                        >
+                            <Scan size={18} />
+                        </button>
                     </div>
                     <div className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3">
                         <Filter size={18} className="text-gray-400" />
@@ -218,6 +227,16 @@ export default function InventoryStock() {
                     onSuccess={() => {
                         setShowAdjustmentModal(false);
                         fetchData();
+                    }}
+                />
+            )}
+
+            {isScannerOpen && (
+                <BarcodeScannerModal
+                    onClose={() => setIsScannerOpen(false)}
+                    onScan={(decodedText) => {
+                        setSearch(decodedText);
+                        setIsScannerOpen(false);
                     }}
                 />
             )}

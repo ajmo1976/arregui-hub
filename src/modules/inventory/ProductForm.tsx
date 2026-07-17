@@ -3,6 +3,8 @@ import { X, Loader2, Info, LayoutGrid, BarChart3, Tag, Hash, AlignLeft } from 'l
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import BarcodeScannerModal from '../../components/BarcodeScannerModal';
+import { Scan } from 'lucide-react';
 
 interface Props {
     product?: any;
@@ -17,6 +19,7 @@ export default function ProductForm({ product, onClose, onSuccess }: Props) {
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [productTypes, setProductTypes] = useState<any[]>([]);
     const { canShowPrices } = useCurrency();
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
 
     const [formData, setFormData] = useState({
         sku: product?.sku || '',
@@ -146,11 +149,19 @@ export default function ProductForm({ product, onClose, onSuccess }: Props) {
                                         <div className="relative">
                                             <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                                             <input
-                                                className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all dark:text-white text-sm font-medium"
+                                                className="w-full pl-11 pr-12 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all dark:text-white text-sm font-medium"
                                                 placeholder="Escanea o escribe..."
                                                 value={formData.barcode}
                                                 onChange={e => setFormData({ ...formData, barcode: e.target.value })}
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsScannerOpen(true)}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+                                                title="Escanear Código"
+                                            >
+                                                <Scan size={16} />
+                                            </button>
                                         </div>
                                     </div>
                                     <div className="col-span-2 space-y-1.5">
@@ -324,6 +335,17 @@ export default function ProductForm({ product, onClose, onSuccess }: Props) {
                     </div>
                 </form>
             </div>
+            
+            {/* Scanner Modal */}
+            {isScannerOpen && (
+                <BarcodeScannerModal
+                    onScan={(code) => {
+                        setFormData({ ...formData, barcode: code });
+                        setIsScannerOpen(false);
+                    }}
+                    onClose={() => setIsScannerOpen(false)}
+                />
+            )}
         </div>
     );
 }

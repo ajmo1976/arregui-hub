@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Package } from 'lucide-react';
+import { Search, Package, Scan } from 'lucide-react';
+import BarcodeScannerModal from './BarcodeScannerModal';
 
 interface Product {
     id: number;
@@ -18,6 +19,7 @@ interface Props {
 
 export default function ProductSearchSelect({ products, onSelect, placeholder = "Buscar producto...", selectedId }: Props) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [search, setSearch] = useState('');
     const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +59,17 @@ export default function ProductSearchSelect({ products, onSelect, placeholder = 
                     }}
                     onFocus={() => setIsOpen(true)}
                 />
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsScannerOpen(true);
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    title="Escanear código"
+                >
+                    <Scan size={18} />
+                </button>
             </div>
 
             {isOpen && (
@@ -89,6 +102,17 @@ export default function ProductSearchSelect({ products, onSelect, placeholder = 
                         </div>
                     )}
                 </div>
+            )}
+
+            {isScannerOpen && (
+                <BarcodeScannerModal
+                    onClose={() => setIsScannerOpen(false)}
+                    onScan={(decodedText) => {
+                        setSearch(decodedText);
+                        setIsOpen(true);
+                        setIsScannerOpen(false);
+                    }}
+                />
             )}
         </div>
     );

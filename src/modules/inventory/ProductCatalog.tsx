@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Filter, Loader2, PackageSearch, Download } from 'lucide-react';
+import { Search, Plus, Filter, Loader2, PackageSearch, Download, Scan } from 'lucide-react';
+import BarcodeScannerModal from '../../components/BarcodeScannerModal';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 import ProductForm from './ProductForm';
@@ -13,6 +14,7 @@ export default function ProductCatalog() {
     const [categoryFilter, setCategoryFilter] = useState('');
     const [categories, setCategories] = useState<any[]>([]);
     const [showForm, setShowForm] = useState(false);
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 15;
@@ -83,10 +85,17 @@ export default function ProductCatalog() {
                     <input
                         type="text"
                         placeholder="Buscar por SKU, Nombre o Código de Barra..."
-                        className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all dark:text-white"
+                        className="w-full pl-10 pr-12 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all dark:text-white"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
+                    <button
+                        onClick={() => setIsScannerOpen(true)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                        title="Escanear código"
+                    >
+                        <Scan size={18} />
+                    </button>
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto">
@@ -237,6 +246,16 @@ export default function ProductCatalog() {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {isScannerOpen && (
+                <BarcodeScannerModal
+                    onClose={() => setIsScannerOpen(false)}
+                    onScan={(decodedText) => {
+                        setSearch(decodedText);
+                        setIsScannerOpen(false);
+                    }}
+                />
             )}
         </div>
     );
