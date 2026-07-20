@@ -132,7 +132,11 @@ const getStatusColors = (status: string) => {
     }
 };
 
-export default function ServicesCalendar() {
+interface ServicesCalendarProps {
+    onEventClick?: (eventId: number) => void;
+}
+
+export default function ServicesCalendar({ onEventClick }: ServicesCalendarProps) {
     const { user } = useAuthStore();
     const isBasicUser = user?.role_name?.toLowerCase() === 'básico' || user?.role_name?.toLowerCase() === 'basico';
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -140,14 +144,22 @@ export default function ServicesCalendar() {
     const [loading, setLoading] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [view, setView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
+
+    const handleEventSelect = (ev: any) => {
+        if (onEventClick) {
+            onEventClick(ev.id);
+        } else {
+            setSelectedEvent(ev);
+        }
+    };
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const weekScrollRef = React.useRef<HTMLDivElement>(null);
 
     // Auto-scroll to first event of the week
     useEffect(() => {
         if (view === 'week' && weekScrollRef.current && events.length > 0) {
-            const start = startOfWeek(currentDate, { locale: es });
-            const end = endOfWeek(currentDate, { locale: es });
+            const start = startOfWeek(currentDate, { weekStartsOn: 0 });
+            const end = endOfWeek(currentDate, { weekStartsOn: 0 });
             const weekEvents = events.filter(ev => {
                 const d = parseNeutralDate(ev.service_date);
                 return d >= start && d <= end;
@@ -181,8 +193,8 @@ export default function ServicesCalendar() {
     const getHeaderTitle = () => {
         if (view === 'month') return format(currentDate, 'MMMM yyyy', { locale: es });
         if (view === 'week') {
-            const start = startOfWeek(currentDate, { locale: es });
-            const end = endOfWeek(currentDate, { locale: es });
+            const start = startOfWeek(currentDate, { weekStartsOn: 0 });
+            const end = endOfWeek(currentDate, { weekStartsOn: 0 });
             return `Semana del ${format(start, 'd')} al ${format(end, 'd')} de ${format(end, 'MMMM', { locale: es })}`;
         }
         return format(currentDate, "EEEE, d 'de' MMMM", { locale: es });
@@ -318,10 +330,10 @@ export default function ServicesCalendar() {
     };
 
     const renderWeekCells = () => {
-        const start = startOfWeek(currentDate, { locale: es });
+        const start = startOfWeek(currentDate, { weekStartsOn: 0 });
         const days = eachDayOfInterval({
             start,
-            end: endOfWeek(start, { locale: es })
+            end: endOfWeek(start, { weekStartsOn: 0 })
         });
         const hours = Array.from({ length: 24 }, (_, i) => i);
 
@@ -457,7 +469,7 @@ export default function ServicesCalendar() {
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setSelectedEvent(ev);
+                                                    handleEventSelect(ev);
                                                 }}
                                                 style={{
                                                     top: `${top}px`,
@@ -524,7 +536,7 @@ export default function ServicesCalendar() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: idx * 0.1 }}
-                                    onClick={() => setSelectedEvent(ev)}
+                                    onClick={() => handleEventSelect(ev)}
                                     className="group relative pl-8 pr-6 py-6 rounded-[2rem] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:border-primary/30 hover:shadow-2xl transition-all cursor-pointer overflow-hidden"
                                 >
                                     <div className={`absolute top-0 left-0 bottom-0 w-2 ${colors.solidBg}`} />
@@ -623,7 +635,7 @@ export default function ServicesCalendar() {
                                 return (
                                     <motion.div
                                         key={`${ev.id}-${idx}`}
-                                        onClick={() => setSelectedEvent(ev)}
+                                        onClick={() => handleEventSelect(ev)}
                                         className="p-5 rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden pl-7"
                                     >
                                         <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${colors.solidBg}`} />
@@ -663,8 +675,8 @@ export default function ServicesCalendar() {
     const renderMonthCells = () => {
         const monthStart = startOfMonth(currentDate);
         const monthEnd = endOfMonth(monthStart);
-        const startDate = startOfWeek(monthStart, { locale: es });
-        const endDate = endOfWeek(monthEnd, { locale: es });
+        const startDate = startOfWeek(monthStart, { weekStartsOn: 0 });
+        const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
         const rows = [];
         let days = [];
@@ -714,7 +726,7 @@ export default function ServicesCalendar() {
                                         animate={{ opacity: 1, x: 0 }}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setSelectedEvent(ev);
+                                            handleEventSelect(ev);
                                         }}
                                         className={`p-1.5 rounded-lg ${colors.bg} border ${colors.border} transition-all cursor-pointer overflow-hidden group/ev`}
                                     >

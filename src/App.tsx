@@ -91,6 +91,7 @@ export default function App() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [showLanding, setShowLanding] = useState(true);
+    const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
     useEffect(() => {
         const checkScreenSize = () => {
@@ -147,8 +148,20 @@ export default function App() {
     const renderModule = () => {
         switch (activeModule) {
             case 'dashboard': return <Dashboard />;
-            case 'events': return <ServicesCalendar />;
-            case 'catering': return <ServicesView />;
+            case 'events': return (
+                <ServicesCalendar
+                    onEventClick={(id) => {
+                        setSelectedEventId(id);
+                        setActiveModule('catering');
+                    }}
+                />
+            );
+            case 'catering': return (
+                <ServicesView
+                    initialSelectedEventId={selectedEventId}
+                    onClearRoute={() => setSelectedEventId(null)}
+                />
+            );
             case 'inventory': return <InventoryView />;
             case 'suppliers': return <SupplierView />;
             case 'logs': return <DailyRecordsView />;

@@ -42,7 +42,12 @@ const formatNeutralDate = (dateStr: string) => {
     return `${day} ${monthName} ${year}`;
 };
 
-export default function ServicesView() {
+interface ServicesViewProps {
+    initialSelectedEventId?: number | null;
+    onClearRoute?: () => void;
+}
+
+export default function ServicesView({ initialSelectedEventId, onClearRoute }: ServicesViewProps) {
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -1188,6 +1193,18 @@ export default function ServicesView() {
     useEffect(() => {
         fetchEvents();
     }, []);
+
+    useEffect(() => {
+        if (initialSelectedEventId && events.length > 0) {
+            const found = events.find(e => e.id === initialSelectedEventId);
+            if (found) {
+                setSelectedEvent(found);
+                if (onClearRoute) {
+                    onClearRoute();
+                }
+            }
+        }
+    }, [initialSelectedEventId, events, onClearRoute]);
 
     const filteredEvents = events
         .filter(ev => {
