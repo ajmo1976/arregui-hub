@@ -6,7 +6,8 @@ import {
     Truck,
     Save,
     Loader2,
-    ArrowRight
+    ArrowRight,
+    Plus
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { inventoryApi } from '../../services/api';
@@ -17,6 +18,49 @@ interface DailyRecordFormProps {
     onSuccess: () => void;
     initialData?: any;
 }
+
+const parseObservations = (obs: string, fallbackLunchSold?: number) => {
+    if (!obs) {
+        return { 
+            t1: '', 
+            t2: '', 
+            t3: '', 
+            t4: '', 
+            manual: fallbackLunchSold !== undefined && fallbackLunchSold !== null ? fallbackLunchSold : '', 
+            cleanObs: '' 
+        };
+    }
+    const match = obs.match(/\[DESGLOSE_ALMUERZOS:\s*T1=(\d+|),\s*T2=(\d+|),\s*T3=(\d+|),\s*T4=(\d+|),\s*M=(\d+|)\]/);
+    if (match) {
+        return {
+            t1: match[1] === '' ? '' : parseInt(match[1]),
+            t2: match[2] === '' ? '' : parseInt(match[2]),
+            t3: match[3] === '' ? '' : parseInt(match[3]),
+            t4: match[4] === '' ? '' : parseInt(match[4]),
+            manual: match[5] === '' ? '' : parseInt(match[5]),
+            cleanObs: obs.replace(/\[DESGLOSE_ALMUERZOS:\s*T1=(\d+|),\s*T2=(\d+|),\s*T3=(\d+|),\s*T4=(\d+|),\s*M=(\d+|)\]\s*/, '')
+        };
+    }
+    const legacyMatch = obs.match(/\[DESGLOSE_ALMUERZOS:\s*T1=(\d+|),\s*T2=(\d+|),\s*M=(\d+|)\]/);
+    if (legacyMatch) {
+        return {
+            t1: legacyMatch[1] === '' ? '' : parseInt(legacyMatch[1]),
+            t2: legacyMatch[2] === '' ? '' : parseInt(legacyMatch[2]),
+            t3: '',
+            t4: '',
+            manual: legacyMatch[3] === '' ? '' : parseInt(legacyMatch[3]),
+            cleanObs: obs.replace(/\[DESGLOSE_ALMUERZOS:\s*T1=(\d+|),\s*T2=(\d+|),\s*M=(\d+|)\]\s*/, '')
+        };
+    }
+    return { 
+        t1: '', 
+        t2: '', 
+        t3: '', 
+        t4: '', 
+        manual: fallbackLunchSold !== undefined && fallbackLunchSold !== null ? fallbackLunchSold : '', 
+        cleanObs: obs 
+    };
+};
 
 import { useCurrency } from '../../contexts/CurrencyContext';
 
@@ -29,6 +73,11 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
     const [formData, setFormData] = useState<any>({
         log_date: new Date().toISOString().split('T')[0],
         lunch_sold: '',
+        t1: '',
+        t2: '',
+        t3: '',
+        t4: '',
+        manual: '',
         breakfast_revenue: '',
         delivery_lunch: '',
         delivery_dinner: '',
@@ -39,9 +88,16 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
 
     useEffect(() => {
         if (initialData) {
+            const parsed = parseObservations(initialData.observations, initialData.lunch_sold);
             setFormData({
                 ...initialData,
-                log_date: initialData.log_date.split('T')[0]
+                log_date: initialData.log_date.split('T')[0],
+                t1: parsed.t1,
+                t2: parsed.t2,
+                t3: parsed.t3,
+                t4: parsed.t4,
+                manual: parsed.manual,
+                observations: parsed.cleanObs
             });
         }
         fetchPrices();
@@ -86,13 +142,21 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
 
     const standardPrice = getPriceForDate('ESTANDAR', formData.log_date);
     const nightPrice = getPriceForDate('SOBRE_CENA', formData.log_date);
-    const lunchRevenue = (formData.lunch_sold || 0) * standardPrice;
+    
+    // Calculate lunch_sold dynamically from t1, t2, t3, t4, manual inputs
+    const calculatedLunchSold = (parseInt(formData.t1) || 0) + 
+                                (parseInt(formData.t2) || 0) + 
+                                (parseInt(formData.t3) || 0) + 
+                                (parseInt(formData.t4) || 0) + 
+                                (parseInt(formData.manual) || 0);
+    const lunchRevenue = calculatedLunchSold * standardPrice;
+    
     const totalRevenue = (formData.breakfast_revenue || 0) + (formData.delivery_revenue || 0) + lunchRevenue;
 
     // Improved price calculation logic
     useEffect(() => {
-        const calculatedRevenue = (formData.delivery_lunch + formData.delivery_dinner) * standardPrice
-            + (formData.delivery_night * nightPrice);
+        const calculatedRevenue = ((parseInt(formData.delivery_lunch) || 0) + (parseInt(formData.delivery_dinner) || 0)) * standardPrice
+            + ((parseInt(formData.delivery_night) || 0) * nightPrice);
 
         setFormData((prev: any) => ({
             ...prev,
@@ -104,11 +168,24 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
         e.preventDefault();
         try {
             setLoading(true);
+            const cleanObservations = formData.observations ? formData.observations.trim() : '';
+            const metadata = `[DESGLOSE_ALMUERZOS: T1=${formData.t1 || 0}, T2=${formData.t2 || 0}, T3=${formData.t3 || 0}, T4=${formData.t4 || 0}, M=${formData.manual || 0}]`;
+            
+            const payload = {
+                ...formData,
+                lunch_sold: calculatedLunchSold,
+                observations: `${metadata} ${cleanObservations}`.trim(),
+                delivery_lunch: formData.delivery_lunch || 0,
+                delivery_dinner: formData.delivery_dinner || 0,
+                delivery_night: formData.delivery_night || 0,
+                delivery_revenue: formData.delivery_revenue || 0
+            };
+
             if (isEdit) {
-                await inventoryApi.updateDailyLog(initialData.id, formData);
+                await inventoryApi.updateDailyLog(initialData.id, payload);
                 toast.success('Registro actualizado');
             } else {
-                await inventoryApi.createDailyLog(formData);
+                await inventoryApi.createDailyLog(payload);
                 toast.success('Registro guardado');
             }
             onSuccess();
@@ -121,36 +198,50 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
     };
 
     return (
-        <div className="fixed inset-0 bg-[#0B0E14]/60 backdrop-blur-xl flex items-center justify-center z-[110] p-4">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="bg-white dark:bg-[#151921] w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden border border-white/50 dark:border-gray-800"
-            >
-                {/* Header matching System Settings Modal */}
-                <div className="p-8 pb-4 flex items-center justify-between">
-                    <div>
-                        <h3 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter uppercase">
-                            {isEdit ? 'Modificar' : 'Nuevo'} <span className="text-primary">Registro</span>
-                        </h3>
-                        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">Operación Diaria</p>
+        <div className="space-y-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+            
+            {/* Cabecera matching "Nuevo Evento y Servicios" screenshot */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-green-50 dark:bg-emerald-950/30 rounded-full flex items-center justify-center flex-shrink-0 text-primary">
+                        <Plus size={20} strokeWidth={2.5} />
                     </div>
-                    <button onClick={onClose} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <X size={20} className="text-gray-400" />
-                    </button>
+                    <div>
+                        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+                            {isEdit ? 'Modificar' : 'Nuevo'} Registro
+                        </h1>
+                        <p className="text-gray-500 text-xs font-medium">
+                            Completa la información para procesar el registro diario.
+                        </p>
+                    </div>
                 </div>
+                <button 
+                    type="button" 
+                    onClick={onClose} 
+                    className="p-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl text-gray-400 hover:text-gray-650 dark:hover:text-gray-250 transition-all shadow-sm"
+                >
+                    <X size={20} />
+                </button>
+            </div>
 
-                <form onSubmit={handleSubmit} className="p-8 pt-0 space-y-6 max-h-[95vh] overflow-y-auto custom-scrollbar">
+            {/* Línea divisoria */}
+            <div className="h-px bg-gray-100 dark:bg-gray-800" />
 
-                    {/* Date Selector - Premium Style */}
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Fecha de Operación</label>
-                        <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900 p-6 rounded-[2rem] border border-transparent focus-within:border-primary/20 transition-all">
-                            <Calendar size={24} className="text-primary" />
+            <form onSubmit={handleSubmit} className="space-y-6">
+                
+                {/* Datos Generales (Top section) */}
+                <div className="grid grid-cols-12 gap-4">
+                    
+                    {/* Fecha de Operación */}
+                    <div className="col-span-4 space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                            Fecha de Operación
+                        </label>
+                        <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-950 border border-transparent dark:border-gray-850 rounded-2xl px-4 py-3">
+                            <Calendar size={16} className="text-gray-400" />
                             <input
                                 type="date"
-                                className="bg-transparent border-none outline-none font-black text-2xl tracking-tighter text-gray-900 dark:text-white w-full"
+                                className="bg-transparent border-none outline-none font-medium text-sm text-gray-950 dark:text-white w-full"
                                 value={formData.log_date}
                                 onChange={e => setFormData({ ...formData, log_date: e.target.value })}
                                 readOnly={isEdit}
@@ -159,160 +250,123 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
-                        {/* Comedor Metrics */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 mb-2 p-1">
-                                <Utensils size={14} className="text-emerald-500" />
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white">Sección Comedor</h4>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Almuerzos Vendidos</label>
-                                    <input
-                                        type="number"
-                                        className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-primary/10 text-gray-900 dark:text-white tracking-tighter"
-                                        value={formData.lunch_sold}
-                                        onChange={e => setFormData({ ...formData, lunch_sold: e.target.value === '' ? '' : parseInt(e.target.value) })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-end">
-                                        <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Venta Desayunos ($)</label>
-                                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-tighter mb-1">
-                                            Eq. {formatPrice(formData.breakfast_revenue || 0, currency === 'USD' ? 'VES' : 'USD')}
-                                        </span>
-                                    </div>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-primary/10 text-emerald-600 tracking-tighter"
-                                        value={formData.breakfast_revenue}
-                                        onChange={e => setFormData({ ...formData, breakfast_revenue: e.target.value === '' ? '' : parseFloat(e.target.value) })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Delivery Detail */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 mb-2 p-1">
-                                <Truck size={14} className="text-blue-500" />
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white">Sección Delivery</h4>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Almuerzos</label>
-                                    <input
-                                        type="number"
-                                        className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-blue-500/10 text-gray-900 dark:text-white tracking-tighter"
-                                        value={formData.delivery_lunch}
-                                        onChange={e => setFormData({ ...formData, delivery_lunch: e.target.value === '' ? '' : parseInt(e.target.value) })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Cenas</label>
-                                    <input
-                                        type="number"
-                                        className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-blue-500/10 text-gray-900 dark:text-white tracking-tighter"
-                                        value={formData.delivery_dinner}
-                                        onChange={e => setFormData({ ...formData, delivery_dinner: e.target.value === '' ? '' : parseInt(e.target.value) })}
-                                    />
-                                </div>
-                                <div className="space-y-2 col-span-2">
-                                    <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Sobre Cenas (Noches)</label>
-                                    <input
-                                        type="number"
-                                        className="w-full px-6 py-5 bg-gray-50 dark:bg-gray-900 border-none rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-blue-500/10 text-gray-900 dark:text-white tracking-tighter"
-                                        value={formData.delivery_night}
-                                        onChange={e => setFormData({ ...formData, delivery_night: e.target.value === '' ? '' : parseInt(e.target.value) })}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* General Summary Card */}
-                    <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 rounded-[2rem] border border-primary/20 shadow-sm relative overflow-hidden">
-                        <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                            Resumen General del Día
-                        </h4>
-                        
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-2xl border border-white/50 dark:border-gray-700/50 backdrop-blur-sm">
-                                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Total Servicios</p>
-                                <div className="flex items-end gap-2">
-                                    <span className="text-3xl font-black text-gray-900 dark:text-white">
-                                        {(formData.lunch_sold || 0) + (formData.delivery_lunch || 0) + (formData.delivery_dinner || 0) + (formData.delivery_night || 0)}
-                                    </span>
-                                    <span className="text-xs font-medium text-gray-400 mb-1 pb-0.5">platos</span>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-blue-500/5 dark:bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20 backdrop-blur-sm">
-                                <p className="text-[10px] font-bold text-blue-500 uppercase mb-1">Total Delivery</p>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-lg font-medium text-blue-400">$</span>
-                                    <span className="text-3xl font-black text-blue-600 tracking-tighter">
-                                        {formData.delivery_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                                <p className="text-[9px] font-bold text-blue-400 uppercase tracking-tighter mt-1">
-                                    Eq. {formatPrice(formData.delivery_revenue, currency === 'USD' ? 'VES' : 'USD')}
-                                </p>
-                            </div>
-
-                            <div className="bg-white/50 dark:bg-gray-800/50 p-4 rounded-2xl border border-white/50 dark:border-gray-700/50 backdrop-blur-sm">
-                                <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Ingreso Total</p>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-lg font-medium text-primary/70">$</span>
-                                    <span className="text-3xl font-black text-primary tracking-tighter">
-                                        {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                                <p className="text-[9px] font-bold text-primary/60 uppercase tracking-tighter mt-1">
-                                    Eq. {formatPrice(totalRevenue, currency === 'USD' ? 'VES' : 'USD')}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Observations */}
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Observaciones / Incidencias</label>
-                        <textarea
-                            rows={2}
-                            placeholder="Anota cualquier detalle relevante del día..."
-                            className="w-full px-8 py-4 bg-gray-50 dark:bg-gray-900 border-none rounded-3xl font-medium outline-none focus:ring-2 focus:ring-primary/10 text-gray-700 dark:text-gray-300 resize-none shadow-inner transition-all hover:bg-gray-100 dark:hover:bg-gray-800"
-                            value={formData.observations}
-                            onChange={e => setFormData({ ...formData, observations: e.target.value })}
+                    {/* Venta Desayunos */}
+                    <div className="col-span-4 space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                            Venta Desayunos ($)
+                        </label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Ej. 0.00"
+                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-2xl outline-none focus:ring-2 focus:ring-primary/10 text-emerald-600 font-bold text-sm"
+                            value={formData.breakfast_revenue}
+                            onChange={e => setFormData({ ...formData, breakfast_revenue: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                            required
                         />
                     </div>
+                </div>
 
-                    <div className="flex gap-4 pt-4">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 py-4 rounded-3xl font-black uppercase text-[10px] tracking-widest text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-all border border-gray-100 dark:border-gray-800"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="flex-[2] flex items-center justify-center gap-3 bg-primary hover:bg-primary-dark text-white py-4 rounded-3xl font-black uppercase text-xs tracking-widest shadow-2xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                        >
-                            {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                            {isEdit ? 'Actualizar Datos' : 'Confirmar Registro'}
-                            <ArrowRight size={18} />
-                        </button>
+                {/* Grid principal inferior */}
+                <div className="grid grid-cols-12 gap-6 items-start">
+                    
+                    {/* Columna Izquierda (Resumen General del Día) */}
+                    <div className="col-span-4">
+                        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 space-y-4 shadow-sm">
+                            <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800">
+                                <span className="font-bold text-gray-900 dark:text-white">Resumen del Día</span>
+                                <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] font-black rounded-full uppercase">Caja</span>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Servicios</span>
+                                    <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                        {calculatedLunchSold + (formData.delivery_lunch || 0) + (formData.delivery_dinner || 0) + (formData.delivery_night || 0)} <span className="text-[10px] font-normal text-gray-400">platos</span>
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-gray-800">
+                                    <span className="text-xs font-bold text-gray-955 dark:text-white">Ingreso Total</span>
+                                    <span className="text-base font-black text-primary">
+                                        ${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </form>
-            </motion.div>
+
+                    {/* Columna Derecha (Detalles del Registro) */}
+                    <div className="col-span-8 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 shadow-sm space-y-6">
+                        
+                        {/* Cabecera de la tarjeta */}
+                        <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-900 dark:text-white">Detalles del Registro (Almuerzos)</span>
+                            </div>
+                        </div>
+
+                        {/* inputs de Almuerzos en 5 columnas */}
+                        <div className="grid grid-cols-5 gap-3">
+                            {[1, 2, 3, 4].map(num => (
+                                <div key={num} className="space-y-1">
+                                    <label className="text-[9px] font-bold uppercase text-gray-400/80 ml-1">Torn. {num}</label>
+                                    <input
+                                        type="number"
+                                        placeholder="0"
+                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-800 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 text-gray-950 dark:text-white text-center font-bold text-sm"
+                                        value={formData[`t${num}`] || ''}
+                                        onChange={e => setFormData({ ...formData, [`t${num}`]: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                    />
+                                </div>
+                            ))}
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-bold uppercase text-primary ml-1">Manual</label>
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    className="w-full px-4 py-3 bg-primary/5 dark:bg-primary/10 border border-transparent rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 text-gray-950 dark:text-white text-center font-bold text-sm"
+                                    value={formData.manual}
+                                    onChange={e => setFormData({ ...formData, manual: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Observaciones */}
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                                Observaciones Internas
+                            </label>
+                            <textarea
+                                rows={2}
+                                placeholder="Notas o detalles extra..."
+                                className="w-full px-4 py-3 bg-gray-55/40 dark:bg-gray-955 border border-transparent dark:border-gray-800 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 text-gray-700 dark:text-gray-300 text-sm resize-none"
+                                value={formData.observations}
+                                onChange={e => setFormData({ ...formData, observations: e.target.value })}
+                            />
+                        </div>
+
+                        {/* Botones de acción */}
+                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-5 py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-500 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all border border-gray-150 dark:border-gray-800"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="flex items-center justify-center gap-2 bg-[#4CAF50] hover:bg-[#43a047] text-white px-6 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-green-500/10 disabled:opacity-50"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />}
+                                {isEdit ? 'Actualizar' : 'Confirmar'}
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </form>
         </div>
     );
 }
