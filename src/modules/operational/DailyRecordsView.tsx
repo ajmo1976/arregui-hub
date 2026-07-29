@@ -981,7 +981,7 @@ export default function DailyRecordsView() {
         return Array.from(detailsMap.values());
     }, [planningEvents]);
 
-    const handleDeleteLog = async (id: string) => {
+    const handleDeleteLog = async (id: number) => {
         if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
         try {
             await inventoryApi.deleteDailyLog(id);
@@ -1290,7 +1290,7 @@ export default function DailyRecordsView() {
                                                                     <Edit2 size={15} />
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => handleDelete(log.id)}
+                                                                    onClick={() => handleDeleteLog(log.id)}
                                                                     className="p-2.5 text-gray-400 hover:text-rose-500 hover:bg-white dark:hover:bg-gray-800 rounded-xl shadow-sm border border-transparent hover:border-gray-100 dark:hover:border-gray-700 transition-all"
                                                                 >
                                                                     <Trash2 size={15} />
