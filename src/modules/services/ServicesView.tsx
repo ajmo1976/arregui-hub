@@ -1208,6 +1208,9 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
 
     const filteredEvents = events
         .filter(ev => {
+            // Excluir los registros operativos que pertenecen al módulo de Registros
+            if (ev.company === 'Planificación') return false;
+
             // 1. Buscador global (si está escrito)
             if (searchTerm) {
                 const term = searchTerm.toLowerCase();

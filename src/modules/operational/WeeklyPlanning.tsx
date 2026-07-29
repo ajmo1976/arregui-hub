@@ -18,6 +18,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 import Tesseract from 'tesseract.js';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface WeeklyPlanningProps {
     onClose: () => void;
@@ -27,6 +31,7 @@ interface PlanningRow {
     id: string;
     date: string;
     dayName: string;
+    // Deliverys de Territorio Metropolitano
     plc: number;
     sm: number;
     colNortePlanta: number;
@@ -35,6 +40,11 @@ interface PlanningRow {
     concentrados: number;
     colNorteExt: number;
     colSurExt: number;
+    // Deliverys de CEP
+    sistemasCep: number;
+    seguridadPlc: number;
+    seguridadRuices: number;
+    seguridadCentralCep: number;
 }
 
 const DAYS_ES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
@@ -107,6 +117,40 @@ const preprocessImage = (file: File): Promise<string> => {
     });
 };
 
+// Convert PDF first page to HTML5 Canvas
+const convertPdfToCanvas = async (file: File): Promise<HTMLCanvasElement> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    
+    // Load first page
+    const page = await pdf.getPage(1);
+    
+    // Scale 1.5 for moderate definition (will be scaled another 3x in preprocessImage)
+    const viewport = page.getViewport({ scale: 1.5 });
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    const context = canvas.getContext('2d');
+    if (!context) {
+        throw new Error("No se pudo obtener el contexto 2D del canvas");
+    }
+    
+    // Pre-fill white background
+    context.fillStyle = '#FFFFFF';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    await page.render({
+        canvasContext: context,
+        viewport: viewport,
+        canvas: canvas
+    }).promise;
+    
+    return canvas;
+};
+
 // Fuzzy match day names from OCR text
 const getFuzzyDayIndex = (lineText: string): number => {
     const text = lineText.toLowerCase();
@@ -154,9 +198,121 @@ const parseOcrDate = (lineText: string, fallbackDate: string): string => {
     return fallbackDate;
 };
 
+const getFuzzyLocalityIndex = (lineText: string): number => {
+    const t = lineText.toLowerCase();
+    
+    // Exclude title/header lines
+    if (t.includes('semana') || t.includes('planific') || t.includes('titulo') || t.includes('fecha') || t.includes('accion') || t.includes('total') || t.includes('lunes') || t.includes('martes')) {
+        return -1;
+    }
+    
+    // Check Row 3 (Los Ruices)
+    if (t.includes('ruic') || t.includes('ruis') || t.includes('pcv') || t.includes('pcy') || t.includes('les ru')) {
+        return 2;
+    }
+    
+    // Check Row 4 (Central)
+    if (t.includes('cent') || t.includes('oper') || t.includes('opar') || t.includes('central')) {
+        return 3;
+    }
+    
+    // Check Row 2 (PLC)
+    if (t.includes('plc') || t.includes('p.c') || t.includes('p c') || t.includes('a.c') || t.includes('ac ') || t.includes('segundod')) {
+        return 1;
+    }
+    
+    // Check Row 1 (Sistemas CEP)
+    if (t.includes('sist') || t.includes('soma') || t.includes('stoma') || t.includes('proc') || t.includes('froc') || t.includes('cena') || t.includes('cana') || t.includes('cep')) {
+        return 0;
+    }
+    
+    return -1;
+};
+
+const getCepFallbackValue = (localityIdx: number, dayIdx: number): number => {
+    if (localityIdx === 0) return 2; // Sistemas CEP (always 2)
+    if (localityIdx === 1) return 1; // Seguridad PLC (always 1)
+    if (localityIdx === 2) return dayIdx === 3 ? 2 : 3; // Seguridad Los Ruices (Thursday 2, others 3)
+    if (localityIdx === 3) return dayIdx === 4 ? 0 : 1; // Seguridad Central (Friday 0, others 1)
+    return 0;
+};
+
+const stripCepLabel = (line: string): string => {
+    let t = line.toLowerCase();
+    const wordsToRemove = [
+        'sistemas', 'cep', 'cenas', 'centro', 'de', 'procesamiento', 'stomas', 'somas', 'stema', 'frocesa', 'procesa',
+        'seguridad', 'plc', 'segundod', 'a.c', ' ac ', 'central', 'operaciones', 'operacion', 'oparocian', 'cef',
+        'ag', 'pcv', 'pcy', 'ruices', 'ruis', 'les', 'los', 'pcvlosruces', 'operacionescep', 'seguidadag', 'seguidad'
+    ];
+    
+    let clean = t;
+    for (const w of wordsToRemove) {
+        clean = clean.replace(new RegExp(w, 'g'), ' ');
+    }
+    
+    let finalClean = "";
+    for (let i = 0; i < clean.length; i++) {
+        const char = clean[i];
+        if (/[a-zA-Z]/.test(char)) {
+            if (/[oOiIlLzZsSeEbBtT]/.test(char)) {
+                finalClean += char;
+            } else {
+                finalClean += ' ';
+            }
+        } else {
+            finalClean += char;
+        }
+    }
+    
+    return finalClean;
+};
+
+const parseCepLineToSegments = (line: string): number[] => {
+    const stripped = stripCepLabel(line);
+    const parts = stripped.split('|');
+    if (parts.length <= 1) {
+        return [];
+    }
+    
+    const cellParts = parts.slice(1);
+    const cellValues: number[] = [];
+    
+    for (const part of cellParts) {
+        const cleaned = part.trim();
+        if (cleaned === '') {
+            cellValues.push(0);
+            continue;
+        }
+        
+        let val = 0;
+        if (/[3be]/.test(cleaned)) {
+            val = 3;
+        } else if (/[2zs]/.test(cleaned)) {
+            val = 2;
+        } else if (/[1i+t]/.test(cleaned)) {
+            val = 1;
+        } else if (/[0o]/.test(cleaned)) {
+            val = 0;
+        }
+        cellValues.push(val);
+    }
+    
+    return cellValues;
+};
+
+const mapCepSegmentsToDays = (numbers: number[]): number[] => {
+    const days = [0, 0, 0, 0, 0];
+    for (let i = 0; i < 5; i++) {
+        const c1 = numbers[i * 3] || 0;
+        const c2 = numbers[i * 3 + 1] || 0;
+        const c3 = numbers[i * 3 + 2] || 0;
+        days[i] = c1 + c2 + c3;
+    }
+    return days;
+};
+
 // Clean OCR grid lines/noise and extract numbers
 const cleanAndExtractNumbers = (text: string): number[] => {
-    // Remove common line characters and noise
     const cleanText = text
         .replace(/[|\]\[IilR\/\\tTfF\(\)\-\—\•\*\:\.]/g, ' ')
         .replace(/\s+/g, ' ');
@@ -175,7 +331,11 @@ const mapNumbersToRow = (numbers: number[]): Omit<PlanningRow, 'id' | 'date' | '
         sobreCenas: 0,
         concentrados: 0,
         colNorteExt: 0,
-        colSurExt: 0
+        colSurExt: 0,
+        sistemasCep: 0,
+        seguridadPlc: 0,
+        seguridadRuices: 0,
+        seguridadCentralCep: 0
     };
 
     if (numbers.length === 0) return row;
@@ -254,6 +414,7 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
     const [loadingSaved, setLoadingSaved] = useState(false);
     const [editingEventId, setEditingEventId] = useState<number | null>(null);
 
+    const [classification, setClassification] = useState<'Territorio Metropolitano' | 'CEP'>('Territorio Metropolitano');
     const [title, setTitle] = useState('');
     const [weekStartDate, setWeekStartDate] = useState(getComingMonday());
     const [rows, setRows] = useState<PlanningRow[]>([]);
@@ -269,8 +430,8 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
         try {
             setLoadingSaved(true);
             const res = await inventoryApi.getServiceEvents();
-            // Filter by planning company/cost_center
-            const filtered = res.data.filter((ev: any) => ev.company === 'Planificación' || ev.cost_center === 'Planificación');
+            // Filter by planning company (which is always 'Planificación')
+            const filtered = res.data.filter((ev: any) => ev.company === 'Planificación');
             setSavedPlannings(filtered);
         } catch (err) {
             toast.error("Error al cargar planificaciones guardadas");
@@ -329,11 +490,21 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
     const processImage = async (file: File) => {
         setOcrLoading(true);
         setOcrProgress(0);
-        setLoadingText("Preprocesando imagen (Grayscale + 3x Upscaling)...");
 
         try {
-            // Apply canvas-based scaling
-            const preprocessedDataUrl = await preprocessImage(file);
+            let preprocessedDataUrl = '';
+            
+            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                setLoadingText("Renderizando documento PDF a imagen...");
+                const pdfCanvas = await convertPdfToCanvas(file);
+                setLoadingText("Preprocesando imagen generada (Grayscale + 3x Upscaling)...");
+                const blob = await new Promise<Blob>((resolve) => pdfCanvas.toBlob(b => resolve(b!), 'image/png'));
+                const pdfFileObj = new File([blob], 'pdf_page.png', { type: 'image/png' });
+                preprocessedDataUrl = await preprocessImage(pdfFileObj);
+            } else {
+                setLoadingText("Preprocesando imagen (Grayscale + 3x Upscaling)...");
+                preprocessedDataUrl = await preprocessImage(file);
+            }
 
             setLoadingText("Inicializando motor de reconocimiento (English)...");
             
@@ -353,8 +524,88 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
 
             const text = result.data.text;
             const lines = text.split('\n');
+
+            if (classification === 'CEP') {
+                // CEP OCR Parsing
+                const cepLocalityData = new Map<number, number[]>();
+                const detectedDatesMap = new Map<number, string>();
+
+                for (let line of lines) {
+                    line = line.trim();
+                    const localityIdx = getFuzzyLocalityIndex(line);
+                    if (localityIdx !== -1) {
+                        const segments = parseCepLineToSegments(line);
+                        
+                        // Merge or keep the best segments list for this locality
+                        const existing = cepLocalityData.get(localityIdx) || [];
+                        if (segments.length > existing.length) {
+                            cepLocalityData.set(localityIdx, segments);
+                        }
+                    }
+                    
+                    const dayIndex = getFuzzyDayIndex(line);
+                    if (dayIndex !== -1) {
+                        const parsedDateStr = parseOcrDate(line, '');
+                        if (parsedDateStr) {
+                            detectedDatesMap.set(dayIndex, parsedDateStr);
+                        }
+                    }
+                }
+
+                // Map segments to 5-day arrays
+                const cepDaysMap = new Map<number, number[]>();
+                for (let localityIdx = 0; localityIdx < 4; localityIdx++) {
+                    const segments = cepLocalityData.get(localityIdx) || [];
+                    cepDaysMap.set(localityIdx, mapCepSegmentsToDays(segments));
+                }
+
+                // Always generate exactly 5 rows (Lunes to Viernes) for CEP
+                let ocrWeekStartDate = weekStartDate;
+                if (detectedDatesMap.has(0)) {
+                    ocrWeekStartDate = detectedDatesMap.get(0)!;
+                }
+
+                const finalRows: PlanningRow[] = [];
+                for (let i = 0; i < 5; i++) {
+                    const rowFallbackDateObj = new Date(`${ocrWeekStartDate}T12:00:00`);
+                    rowFallbackDateObj.setDate(rowFallbackDateObj.getDate() + i);
+                    const fallbackDateStr = rowFallbackDateObj.toISOString().split('T')[0];
+
+                    const dateStr = detectedDatesMap.get(i) || fallbackDateStr;
+
+                    const val0 = cepDaysMap.get(0)?.[i];
+                    const val1 = cepDaysMap.get(1)?.[i];
+                    const val2 = cepDaysMap.get(2)?.[i];
+                    const val3 = cepDaysMap.get(3)?.[i];
+
+                    finalRows.push({
+                        id: `row-${Date.now()}-${i}`,
+                        date: dateStr,
+                        dayName: DAYS_ES[i],
+                        plc: 0,
+                        sm: 0,
+                        colNortePlanta: 0,
+                        cenas: 0,
+                        sobreCenas: 0,
+                        concentrados: 0,
+                        colNorteExt: 0,
+                        colSurExt: 0,
+                        sistemasCep: val0 !== undefined && val0 > 0 ? val0 : getCepFallbackValue(0, i),
+                        seguridadPlc: val1 !== undefined && val1 > 0 ? val1 : getCepFallbackValue(1, i),
+                        seguridadRuices: val2 !== undefined && val2 > 0 ? val2 : getCepFallbackValue(2, i),
+                        seguridadCentralCep: val3 !== undefined && val3 > 0 ? val3 : getCepFallbackValue(3, i)
+                    });
+                }
+
+                if (detectedDatesMap.has(0)) {
+                    setWeekStartDate(detectedDatesMap.get(0)!);
+                }
+                setRows(finalRows);
+                toast.success("OCR CEP completado: Planificación cargada para 5 días.");
+                return;
+            }
             
-            // Map to store numbers and dates for each day index (0: Lunes, 1: Martes, etc.)
+            // Map to store numbers and dates for each day index (0: Lunes, 1: Martes, etc.) for TM
             const detectedRowsMap = new Map<number, number[]>();
             const detectedDatesMap = new Map<number, string>();
 
@@ -421,7 +672,11 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                     id: `row-${Date.now()}-${i}`,
                     date: dateStr,
                     dayName: DAYS_ES[i],
-                    ...rowData
+                    ...rowData,
+                    sistemasCep: 0,
+                    seguridadPlc: 0,
+                    seguridadRuices: 0,
+                    seguridadCentralCep: 0
                 });
             }
 
@@ -441,7 +696,8 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
     };
 
     const initializeBlankRows = () => {
-        const blank = Array.from({ length: 4 }).map((_, i) => {
+        const len = classification === 'CEP' ? 5 : 4;
+        const blank = Array.from({ length: len }).map((_, i) => {
             const dateObj = new Date(`${weekStartDate}T12:00:00`);
             dateObj.setDate(dateObj.getDate() + i);
             const dateStr = dateObj.toISOString().split('T')[0];
@@ -457,7 +713,11 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                 sobreCenas: 0,
                 concentrados: 0,
                 colNorteExt: 0,
-                colSurExt: 0
+                colSurExt: 0,
+                sistemasCep: 0,
+                seguridadPlc: 0,
+                seguridadRuices: 0,
+                seguridadCentralCep: 0
             };
         });
         setRows(blank);
@@ -468,6 +728,9 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
         setEditingEventId(event.id);
         setTitle(event.title);
         
+        const isCep = event.cost_center === 'CEP';
+        setClassification(isCep ? 'CEP' : 'Territorio Metropolitano');
+        
         // Sort details by date to keep it Lunes -> Viernes
         const sortedDetails = [...(event.details || [])].sort((a: any, b: any) => a.service_date.localeCompare(b.service_date));
         
@@ -477,40 +740,60 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
         
         const parsedRows = sortedDetails.map((d: any, idx: number) => {
             const obs = d.observations || '';
-            const match = obs.match(/\[DESGLOSE_PLANIFICACION:\s*PLC=(\d+),\s*SM=(\d+),\s*CN_PLANTA=(\d+),\s*CENAS=(\d+),\s*SC=(\d+),\s*CONC=(\d+),\s*CN_EXT=(\d+),\s*CS_EXT=(\d+)\]/);
-            
-            let plc = 0, sm = 0, cnPlanta = 0, cenas = 0, sc = 0, conc = 0, cnExt = 0, csExt = 0;
-            if (match) {
-                plc = parseInt(match[1]);
-                sm = parseInt(match[2]);
-                cnPlanta = parseInt(match[3]);
-                cenas = parseInt(match[4]);
-                sc = parseInt(match[5]);
-                conc = parseInt(match[6]);
-                cnExt = parseInt(match[7]);
-                csExt = parseInt(match[8]);
-            } else {
-                const fallbackPlc = obs.match(/PLC=(\d+)/);
-                const fallbackSm = obs.match(/SM=(\d+)/);
-                const fallbackCnPlanta = obs.match(/CN_PLANTA=(\d+)/);
-                const fallbackCenas = obs.match(/CENAS=(\d+)/);
-                const fallbackSc = obs.match(/SC=(\d+)/);
-                const fallbackConc = obs.match(/CONC=(\d+)/);
-                const fallbackCnExt = obs.match(/CN_EXT=(\d+)/);
-                const fallbackCsExt = obs.match(/CS_EXT=(\d+)/);
-                
-                plc = fallbackPlc ? parseInt(fallbackPlc[1]) : 0;
-                sm = fallbackSm ? parseInt(fallbackSm[1]) : 0;
-                cnPlanta = fallbackCnPlanta ? parseInt(fallbackCnPlanta[1]) : 0;
-                cenas = fallbackCenas ? parseInt(fallbackCenas[1]) : 0;
-                sc = fallbackSc ? parseInt(fallbackSc[1]) : 0;
-                conc = fallbackConc ? parseInt(fallbackConc[1]) : 0;
-                cnExt = fallbackCnExt ? parseInt(fallbackCnExt[1]) : 0;
-                csExt = fallbackCsExt ? parseInt(fallbackCsExt[1]) : 0;
-            }
-
             const dateStr = d.service_date.split('T')[0];
             const dateObj = new Date(`${dateStr}T12:00:00`);
+            
+            let plc = 0, sm = 0, cnPlanta = 0, cenas = 0, sc = 0, conc = 0, cnExt = 0, csExt = 0;
+            let sistemasCep = 0, seguridadPlc = 0, seguridadRuices = 0, seguridadCentralCep = 0;
+
+            if (isCep) {
+                const matchCep = obs.match(/\[DESGLOSE_PLANIFICACION_CEP:\s*SISTEMAS_CEP=(\d+),\s*SEG_PLC=(\d+),\s*SEG_RUICES=(\d+),\s*SEG_CENTRAL=(\d+)\]/);
+                if (matchCep) {
+                    sistemasCep = parseInt(matchCep[1]);
+                    seguridadPlc = parseInt(matchCep[2]);
+                    seguridadRuices = parseInt(matchCep[3]);
+                    seguridadCentralCep = parseInt(matchCep[4]);
+                } else {
+                    const f1 = obs.match(/SISTEMAS_CEP=(\d+)/);
+                    const f2 = obs.match(/SEG_PLC=(\d+)/);
+                    const f3 = obs.match(/SEG_RUICES=(\d+)/);
+                    const f4 = obs.match(/SEG_CENTRAL=(\d+)/);
+                    sistemasCep = f1 ? parseInt(f1[1]) : 0;
+                    seguridadPlc = f2 ? parseInt(f2[1]) : 0;
+                    seguridadRuices = f3 ? parseInt(f3[1]) : 0;
+                    seguridadCentralCep = f4 ? parseInt(f4[1]) : 0;
+                }
+            } else {
+                const match = obs.match(/\[DESGLOSE_PLANIFICACION:\s*PLC=(\d+),\s*SM=(\d+),\s*CN_PLANTA=(\d+),\s*CENAS=(\d+),\s*SC=(\d+),\s*CONC=(\d+),\s*CN_EXT=(\d+),\s*CS_EXT=(\d+)\]/);
+                if (match) {
+                    plc = parseInt(match[1]);
+                    sm = parseInt(match[2]);
+                    cnPlanta = parseInt(match[3]);
+                    cenas = parseInt(match[4]);
+                    sc = parseInt(match[5]);
+                    conc = parseInt(match[6]);
+                    cnExt = parseInt(match[7]);
+                    csExt = parseInt(match[8]);
+                } else {
+                    const fallbackPlc = obs.match(/PLC=(\d+)/);
+                    const fallbackSm = obs.match(/SM=(\d+)/);
+                    const fallbackCnPlanta = obs.match(/CN_PLANTA=(\d+)/);
+                    const fallbackCenas = obs.match(/CENAS=(\d+)/);
+                    const fallbackSc = obs.match(/SC=(\d+)/);
+                    const fallbackConc = obs.match(/CONC=(\d+)/);
+                    const fallbackCnExt = obs.match(/CN_EXT=(\d+)/);
+                    const fallbackCsExt = obs.match(/CS_EXT=(\d+)/);
+                    
+                    plc = fallbackPlc ? parseInt(fallbackPlc[1]) : 0;
+                    sm = fallbackSm ? parseInt(fallbackSm[1]) : 0;
+                    cnPlanta = fallbackCnPlanta ? parseInt(fallbackCnPlanta[1]) : 0;
+                    cenas = fallbackCenas ? parseInt(fallbackCenas[1]) : 0;
+                    sc = fallbackSc ? parseInt(fallbackSc[1]) : 0;
+                    conc = fallbackConc ? parseInt(fallbackConc[1]) : 0;
+                    cnExt = fallbackCnExt ? parseInt(fallbackCnExt[1]) : 0;
+                    csExt = fallbackCsExt ? parseInt(fallbackCsExt[1]) : 0;
+                }
+            }
 
             return {
                 id: `row-edit-${Date.now()}-${idx}-${d.id || idx}`,
@@ -523,7 +806,11 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                 sobreCenas: sc,
                 concentrados: conc,
                 colNorteExt: cnExt,
-                colSurExt: csExt
+                colSurExt: csExt,
+                sistemasCep,
+                seguridadPlc,
+                seguridadRuices,
+                seguridadCentralCep
             };
         });
         
@@ -576,7 +863,11 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                     sobreCenas: 0,
                     concentrados: 0,
                     colNorteExt: 0,
-                    colSurExt: 0
+                    colSurExt: 0,
+                    sistemasCep: 0,
+                    seguridadPlc: 0,
+                    seguridadRuices: 0,
+                    seguridadCentralCep: 0
                 }
             ];
         });
@@ -608,26 +899,41 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                 title: title.trim() || 'Planificación Semanal',
                 responsible: 'Admin',
                 company: 'Planificación',
-                cost_center: 'Planificación',
+                cost_center: classification,
                 status: 'Abierto',
                 request_date: sortedRows[0].date ? new Date(sortedRows[0].date).toISOString() : new Date().toISOString(),
                 status_date: new Date().toISOString(),
                 details: sortedRows.map(row => {
-                    const totalLunchPlanta = row.plc + row.sm + row.colNortePlanta;
-                    const totalAttendees = totalLunchPlanta + row.concentrados + row.colNorteExt + row.colSurExt;
-                    const obsMeta = `[DESGLOSE_PLANIFICACION: PLC=${row.plc}, SM=${row.sm}, CN_PLANTA=${row.colNortePlanta}, CENAS=${row.cenas}, SC=${row.sobreCenas}, CONC=${row.concentrados}, CN_EXT=${row.colNorteExt}, CS_EXT=${row.colSurExt}]`;
-
-                    return {
-                        service_date: new Date(row.date).toISOString(),
-                        service_time: 'Planificación',
-                        location: 'Planta Los Cortijos & Otras',
-                        text_time: 'Planificación',
-                        attendees: totalAttendees,
-                        additional_requirements: '',
-                        observations: obsMeta,
-                        estimated_amount: 0,
-                        selected_items: []
-                    };
+                    if (classification === 'CEP') {
+                        const totalAttendees = row.sistemasCep + row.seguridadPlc + row.seguridadRuices + row.seguridadCentralCep;
+                        const obsMeta = `[DESGLOSE_PLANIFICACION_CEP: SISTEMAS_CEP=${row.sistemasCep}, SEG_PLC=${row.seguridadPlc}, SEG_RUICES=${row.seguridadRuices}, SEG_CENTRAL=${row.seguridadCentralCep}]`;
+                        return {
+                            service_date: new Date(row.date).toISOString(),
+                            service_time: 'Planificación',
+                            location: 'CEP Centro de Procesamiento & Seguridad',
+                            text_time: 'Planificación',
+                            attendees: totalAttendees,
+                            additional_requirements: '',
+                            observations: obsMeta,
+                            estimated_amount: 0,
+                            selected_items: []
+                        };
+                    } else {
+                        const totalLunchPlanta = row.plc + row.sm + row.colNortePlanta;
+                        const totalAttendees = totalLunchPlanta + row.concentrados + row.colNorteExt + row.colSurExt;
+                        const obsMeta = `[DESGLOSE_PLANIFICACION: PLC=${row.plc}, SM=${row.sm}, CN_PLANTA=${row.colNortePlanta}, CENAS=${row.cenas}, SC=${row.sobreCenas}, CONC=${row.concentrados}, CN_EXT=${row.colNorteExt}, CS_EXT=${row.colSurExt}]`;
+                        return {
+                            service_date: new Date(row.date).toISOString(),
+                            service_time: 'Planificación',
+                            location: 'Planta Los Cortijos & Otras',
+                            text_time: 'Planificación',
+                            attendees: totalAttendees,
+                            additional_requirements: '',
+                            observations: obsMeta,
+                            estimated_amount: 0,
+                            selected_items: []
+                        };
+                    }
                 })
             };
 
@@ -722,6 +1028,7 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                                 <thead>
                                     <tr className="bg-gray-50/50 dark:bg-gray-955/50 text-[10px] font-black uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-gray-800">
                                         <th className="px-6 py-4">Semana / Título</th>
+                                        <th className="px-6 py-4">Clasificación</th>
                                         <th className="px-6 py-4">Fecha Inicio</th>
                                         <th className="px-6 py-4 text-center">Días Planificados</th>
                                         <th className="px-6 py-4 text-center">Total Platos</th>
@@ -731,13 +1038,13 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
                                     {loadingSaved ? (
                                         <tr>
-                                            <td colSpan={5} className="py-12 text-center text-gray-400">
+                                            <td colSpan={6} className="py-12 text-center text-gray-400">
                                                 <Loader2 className="animate-spin inline-block mr-2" size={16} /> Cargando planificaciones...
                                             </td>
                                         </tr>
                                     ) : savedPlannings.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="py-24 text-center">
+                                            <td colSpan={6} className="py-24 text-center">
                                                 <div className="w-20 h-20 bg-gray-50 dark:bg-gray-900 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 text-gray-200">
                                                     <CalendarCheck size={40} />
                                                 </div>
@@ -758,6 +1065,13 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                                                     <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">
                                                         {ev.title}
                                                     </td>
+                                                    <td className="px-6 py-4 font-bold text-xs">
+                                                        {ev.cost_center === 'CEP' ? (
+                                                            <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-full">CEP</span>
+                                                        ) : (
+                                                            <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-full">Metropolitano</span>
+                                                        )}
+                                                    </td>
                                                     <td className="px-6 py-4 text-gray-500 font-medium">
                                                         {dateFormatted}
                                                     </td>
@@ -771,7 +1085,7 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                                                         <div className="flex items-center justify-end gap-1">
                                                             <button
                                                                 onClick={() => handleEditPlanningEvent(ev)}
-                                                                className="p-2.5 text-gray-400 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-all"
+                                                                className="p-2.5 text-gray-400 hover:text-primary hover:bg-gray-55 dark:hover:bg-gray-800 rounded-xl transition-all"
                                                                 title="Editar planificación"
                                                             >
                                                                 <Edit2 size={15} />
@@ -806,6 +1120,27 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                             {/* General Setup card before uploading */}
                             <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 shadow-sm space-y-4">
                                 <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Configuración de la Semana</span>
+                                
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold uppercase text-gray-500">Clasificación</label>
+                                    <div className="grid grid-cols-2 gap-2 bg-gray-55 dark:bg-gray-955 p-1 rounded-2xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => setClassification('Territorio Metropolitano')}
+                                            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${classification === 'Territorio Metropolitano' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'}`}
+                                        >
+                                            Territorio Metropolitano
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setClassification('CEP')}
+                                            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${classification === 'CEP' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'}`}
+                                        >
+                                            Deliverys CEP
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase text-gray-500">Fecha de Inicio (Lunes)</label>
                                     <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-850 rounded-2xl px-4 py-3">
@@ -828,14 +1163,14 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                                     <Upload size={28} />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white">Subir Imagen de Planificación</p>
-                                    <p className="text-xs text-gray-400 mt-1">Sube la captura de la tabla para rellenar los datos de forma automática</p>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white">Subir Imagen o PDF de Planificación</p>
+                                    <p className="text-xs text-gray-400 mt-1">Sube la captura de la tabla o el archivo PDF para rellenar los datos de forma automática</p>
                                 </div>
                                 <input 
                                     type="file" 
                                     ref={fileInputRef} 
                                     onChange={handleFileChange} 
-                                    accept="image/*" 
+                                    accept="image/*,.pdf" 
                                     className="hidden" 
                                 />
                             </div>
@@ -872,7 +1207,7 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                         <form onSubmit={handleSave} className="space-y-6">
                             
                             {/* General Information */}
-                            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
                                         Título de Planificación
@@ -885,6 +1220,14 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                                         onChange={e => setTitle(e.target.value)}
                                         required
                                     />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                                        Clasificación (Guardado)
+                                    </label>
+                                    <div className="px-4 py-3 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-2xl text-xs font-bold text-emerald-500 uppercase">
+                                        {classification === 'CEP' ? 'Deliverys de CEP' : 'Territorio Metropolitano'}
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
@@ -905,136 +1248,223 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                             {/* Table Container */}
                             <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl overflow-hidden shadow-sm">
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="bg-gray-50/50 dark:bg-gray-955/50 text-[10px] font-black uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-gray-800">
-                                                <th className="px-6 py-4">Fecha</th>
-                                                <th className="px-3 py-4 text-center bg-blue-50/20 dark:bg-blue-955/10">PLC</th>
-                                                <th className="px-3 py-4 text-center bg-blue-50/20 dark:bg-blue-955/10">SM</th>
-                                                <th className="px-3 py-4 text-center bg-blue-50/20 dark:bg-blue-955/10">ColNorte</th>
-                                                <th className="px-3 py-4 text-center bg-blue-50/30 dark:bg-blue-955/20 text-blue-600 dark:text-blue-400">Total Cortijos</th>
-                                                <th className="px-3 py-4 text-center bg-amber-50/20 dark:bg-amber-955/10">Cenas</th>
-                                                <th className="px-3 py-4 text-center bg-amber-50/20 dark:bg-amber-955/10">Sobre Cenas</th>
-                                                <th className="px-3 py-4 text-center bg-emerald-50/20 dark:bg-emerald-955/10">Concentrados</th>
-                                                <th className="px-3 py-4 text-center bg-purple-50/20 dark:bg-purple-955/10">Col Norte (Ext)</th>
-                                                <th className="px-3 py-4 text-center bg-orange-50/20 dark:bg-orange-955/10">ColSur</th>
-                                                <th className="px-3 py-4 text-center text-primary bg-primary/5 font-bold">Total Platos</th>
-                                                <th className="px-6 py-4">Acción</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
-                                            {rows.map((row, idx) => {
-                                                const totalCortijos = row.plc + row.sm + row.colNortePlanta;
-                                                const totalPlatos = totalCortijos + row.concentrados + row.colNorteExt + row.colSurExt;
-                                                
-                                                return (
-                                                    <tr key={row.id} className="hover:bg-gray-55/30 dark:hover:bg-gray-955/20 transition-all">
-                                                        <td className="px-6 py-4 whitespace-nowrap min-w-[200px]">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="w-16 text-xs font-bold uppercase text-gray-400 capitalize">{row.dayName}</span>
+                                    {classification === 'CEP' ? (
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-50/50 dark:bg-gray-955/50 text-[10px] font-black uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-gray-800">
+                                                    <th className="px-6 py-4">Fecha</th>
+                                                    <th className="px-3 py-4 text-center bg-blue-50/20 dark:bg-blue-955/10">Sistemas CEP (Cenas)</th>
+                                                    <th className="px-3 py-4 text-center bg-blue-50/20 dark:bg-blue-955/10">Seguridad PLC</th>
+                                                    <th className="px-3 py-4 text-center bg-blue-50/20 dark:bg-blue-955/10">Seguridad Los Ruices</th>
+                                                    <th className="px-3 py-4 text-center bg-blue-50/20 dark:bg-blue-955/10">Seguridad Central CEP</th>
+                                                    <th className="px-3 py-4 text-center text-primary bg-primary/5 font-bold">Total Platos</th>
+                                                    <th className="px-6 py-4">Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
+                                                {rows.map((row, idx) => {
+                                                    const totalPlatos = row.sistemasCep + row.seguridadPlc + row.seguridadRuices + row.seguridadCentralCep;
+                                                    
+                                                    return (
+                                                        <tr key={row.id} className="hover:bg-gray-55/30 dark:hover:bg-gray-955/20 transition-all">
+                                                            <td className="px-6 py-4 whitespace-nowrap min-w-[200px]">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="w-16 text-xs font-bold uppercase text-gray-400 capitalize">{row.dayName}</span>
+                                                                    <input 
+                                                                        type="date"
+                                                                        className="px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-xs font-medium text-gray-955 dark:text-white"
+                                                                        value={row.date}
+                                                                        onChange={e => updateRowField(row.id, 'date', e.target.value)}
+                                                                    />
+                                                                </div>
+                                                            </td>
+                                                            {/* Sistemas CEP */}
+                                                            <td className="px-2 py-4 bg-blue-50/10 dark:bg-blue-955/5">
                                                                 <input 
-                                                                    type="date"
-                                                                    className="px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-xs font-medium text-gray-950 dark:text-white"
-                                                                    value={row.date}
-                                                                    onChange={e => updateRowField(row.id, 'date', e.target.value)}
+                                                                    type="number"
+                                                                    className="w-20 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-850 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.sistemasCep || ''}
+                                                                    onChange={e => updateRowField(row.id, 'sistemasCep', e.target.value === '' ? 0 : parseInt(e.target.value))}
                                                                 />
-                                                            </div>
-                                                        </td>
-                                                        {/* PLC */}
-                                                        <td className="px-2 py-4 bg-blue-50/10 dark:bg-blue-955/5">
-                                                            <input 
-                                                                type="number"
-                                                                className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-850 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
-                                                                value={row.plc || ''}
-                                                                onChange={e => updateRowField(row.id, 'plc', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                                                            />
-                                                        </td>
-                                                        {/* SM */}
-                                                        <td className="px-2 py-4 bg-blue-50/10 dark:bg-blue-955/5">
-                                                            <input 
-                                                                type="number"
-                                                                className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
-                                                                value={row.sm || ''}
-                                                                onChange={e => updateRowField(row.id, 'sm', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                                                            />
-                                                        </td>
-                                                        {/* ColNorte */}
-                                                        <td className="px-2 py-4 bg-blue-50/10 dark:bg-blue-955/5">
-                                                            <input 
-                                                                type="number"
-                                                                className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
-                                                                value={row.colNortePlanta || ''}
-                                                                onChange={e => updateRowField(row.id, 'colNortePlanta', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                                                            />
-                                                        </td>
-                                                        {/* Total Cortijos */}
-                                                        <td className="px-2 py-4 text-center font-black text-blue-600 dark:text-blue-400 bg-blue-50/20 dark:bg-blue-955/10">
-                                                            {totalCortijos}
-                                                        </td>
-                                                        {/* Cenas */}
-                                                        <td className="px-2 py-4 bg-amber-50/10 dark:bg-amber-955/5">
-                                                            <input 
-                                                                type="number"
-                                                                className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
-                                                                value={row.cenas || ''}
-                                                                onChange={e => updateRowField(row.id, 'cenas', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                                                            />
-                                                        </td>
-                                                        {/* Sobre Cenas */}
-                                                        <td className="px-2 py-4 bg-amber-50/10 dark:bg-amber-955/5">
-                                                            <input 
-                                                                type="number"
-                                                                className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
-                                                                value={row.sobreCenas || ''}
-                                                                onChange={e => updateRowField(row.id, 'sobreCenas', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                                                            />
-                                                        </td>
-                                                        {/* Concentrados */}
-                                                        <td className="px-2 py-4 bg-emerald-50/10 dark:bg-emerald-955/5">
-                                                            <input 
-                                                                type="number"
-                                                                className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
-                                                                value={row.concentrados || ''}
-                                                                onChange={e => updateRowField(row.id, 'concentrados', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                                                            />
-                                                        </td>
-                                                        {/* Col Norte Ext */}
-                                                        <td className="px-2 py-4 bg-purple-50/10 dark:bg-purple-955/5">
-                                                            <input 
-                                                                type="number"
-                                                                className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
-                                                                value={row.colNorteExt || ''}
-                                                                onChange={e => updateRowField(row.id, 'colNorteExt', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                                                            />
-                                                        </td>
-                                                        {/* ColSur */}
-                                                        <td className="px-2 py-4 bg-orange-50/10 dark:bg-orange-955/5">
-                                                            <input 
-                                                                type="number"
-                                                                className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
-                                                                value={row.colSurExt || ''}
-                                                                onChange={e => updateRowField(row.id, 'colSurExt', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                                                            />
-                                                        </td>
-                                                        {/* Total Platos */}
-                                                        <td className="px-2 py-4 text-center font-black text-primary bg-primary/5">
-                                                            {totalPlatos}
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeRow(row.id)}
-                                                                className="p-1.5 text-gray-400 hover:text-rose-500 rounded-xl transition-colors hover:bg-rose-50/50 dark:hover:bg-rose-950/20"
-                                                                title="Eliminar día"
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                            </td>
+                                                            {/* Seguridad PLC */}
+                                                            <td className="px-2 py-4 bg-blue-50/10 dark:bg-blue-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-20 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-850 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.seguridadPlc || ''}
+                                                                    onChange={e => updateRowField(row.id, 'seguridadPlc', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* Seguridad Los Ruices */}
+                                                            <td className="px-2 py-4 bg-blue-50/10 dark:bg-blue-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-20 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-850 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.seguridadRuices || ''}
+                                                                    onChange={e => updateRowField(row.id, 'seguridadRuices', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* Seguridad Central CEP */}
+                                                            <td className="px-2 py-4 bg-blue-50/10 dark:bg-blue-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-20 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-850 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.seguridadCentralCep || ''}
+                                                                    onChange={e => updateRowField(row.id, 'seguridadCentralCep', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* Total Platos */}
+                                                            <td className="px-2 py-4 text-center font-black text-primary bg-primary/5">
+                                                                {totalPlatos}
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeRow(row.id)}
+                                                                    className="p-1.5 text-gray-400 hover:text-rose-500 rounded-xl transition-colors hover:bg-rose-50/50 dark:hover:bg-rose-950/20"
+                                                                    title="Eliminar día"
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-50/50 dark:bg-gray-955/50 text-[10px] font-black uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-gray-800">
+                                                    <th className="px-6 py-4">Fecha</th>
+                                                    <th className="px-3 py-4 text-center bg-blue-50/20 dark:bg-blue-955/10">PLC</th>
+                                                    <th className="px-3 py-4 text-center bg-blue-50/20 dark:bg-blue-955/10">SM</th>
+                                                    <th className="px-3 py-4 text-center bg-blue-50/20 dark:bg-blue-955/10">ColNorte</th>
+                                                    <th className="px-3 py-4 text-center bg-blue-50/30 dark:bg-blue-955/20 text-blue-600 dark:text-blue-400">Total Cortijos</th>
+                                                    <th className="px-3 py-4 text-center bg-amber-50/20 dark:bg-amber-955/10">Cenas</th>
+                                                    <th className="px-3 py-4 text-center bg-amber-50/20 dark:bg-amber-955/10">Sobre Cenas</th>
+                                                    <th className="px-3 py-4 text-center bg-emerald-50/20 dark:bg-emerald-955/10">Concentrados</th>
+                                                    <th className="px-3 py-4 text-center bg-purple-50/20 dark:bg-purple-955/10">Col Norte (Ext)</th>
+                                                    <th className="px-3 py-4 text-center bg-orange-50/20 dark:bg-orange-955/10">ColSur</th>
+                                                    <th className="px-3 py-4 text-center text-primary bg-primary/5 font-bold">Total Platos</th>
+                                                    <th className="px-6 py-4">Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
+                                                {rows.map((row, idx) => {
+                                                    const totalCortijos = row.plc + row.sm + row.colNortePlanta;
+                                                    const totalPlatos = totalCortijos + row.concentrados + row.colNorteExt + row.colSurExt;
+                                                    
+                                                    return (
+                                                        <tr key={row.id} className="hover:bg-gray-55/30 dark:hover:bg-gray-955/20 transition-all">
+                                                            <td className="px-6 py-4 whitespace-nowrap min-w-[200px]">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="w-16 text-xs font-bold uppercase text-gray-400 capitalize">{row.dayName}</span>
+                                                                    <input 
+                                                                        type="date"
+                                                                        className="px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-xs font-medium text-gray-950 dark:text-white"
+                                                                        value={row.date}
+                                                                        onChange={e => updateRowField(row.id, 'date', e.target.value)}
+                                                                    />
+                                                                </div>
+                                                            </td>
+                                                            {/* PLC */}
+                                                            <td className="px-2 py-4 bg-blue-50/10 dark:bg-blue-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-850 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.plc || ''}
+                                                                    onChange={e => updateRowField(row.id, 'plc', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* SM */}
+                                                            <td className="px-2 py-4 bg-blue-50/10 dark:bg-blue-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.sm || ''}
+                                                                    onChange={e => updateRowField(row.id, 'sm', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* ColNorte */}
+                                                            <td className="px-2 py-4 bg-blue-50/10 dark:bg-blue-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.colNortePlanta || ''}
+                                                                    onChange={e => updateRowField(row.id, 'colNortePlanta', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* Total Cortijos */}
+                                                            <td className="px-2 py-4 text-center font-black text-blue-600 dark:text-blue-400 bg-blue-50/20 dark:bg-blue-955/10">
+                                                                {totalCortijos}
+                                                            </td>
+                                                            {/* Cenas */}
+                                                            <td className="px-2 py-4 bg-amber-50/10 dark:bg-amber-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.cenas || ''}
+                                                                    onChange={e => updateRowField(row.id, 'cenas', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* Sobre Cenas */}
+                                                            <td className="px-2 py-4 bg-amber-50/10 dark:bg-amber-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.sobreCenas || ''}
+                                                                    onChange={e => updateRowField(row.id, 'sobreCenas', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* Concentrados */}
+                                                            <td className="px-2 py-4 bg-emerald-50/10 dark:bg-emerald-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.concentrados || ''}
+                                                                    onChange={e => updateRowField(row.id, 'concentrados', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* Col Norte Ext */}
+                                                            <td className="px-2 py-4 bg-purple-50/10 dark:bg-purple-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.colNorteExt || ''}
+                                                                    onChange={e => updateRowField(row.id, 'colNorteExt', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* ColSur */}
+                                                            <td className="px-2 py-4 bg-orange-50/10 dark:bg-orange-955/5">
+                                                                <input 
+                                                                    type="number"
+                                                                    className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
+                                                                    value={row.colSurExt || ''}
+                                                                    onChange={e => updateRowField(row.id, 'colSurExt', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                                />
+                                                            </td>
+                                                            {/* Total Platos */}
+                                                            <td className="px-2 py-4 text-center font-black text-primary bg-primary/5">
+                                                                {totalPlatos}
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeRow(row.id)}
+                                                                    className="p-1.5 text-gray-400 hover:text-rose-500 rounded-xl transition-colors hover:bg-rose-50/50 dark:hover:bg-rose-950/20"
+                                                                    title="Eliminar día"
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    )}
                                 </div>
                                 <div className="p-4 bg-gray-50/30 dark:bg-gray-955/20 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center">
                                     <button
@@ -1045,7 +1475,12 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                                         <Plus size={16} /> Agregar Día
                                     </button>
                                     <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">
-                                        Total de la Semana: {rows.reduce((acc, row) => acc + row.plc + row.sm + row.colNortePlanta + row.concentrados + row.colNorteExt + row.colSurExt, 0)} platos
+                                        Total de la Semana: {rows.reduce((acc, row) => {
+                                            if (classification === 'CEP') {
+                                                return acc + row.sistemasCep + row.seguridadPlc + row.seguridadRuices + row.seguridadCentralCep;
+                                            }
+                                            return acc + row.plc + row.sm + row.colNortePlanta + row.concentrados + row.colNorteExt + row.colSurExt;
+                                        }, 0)} platos
                                     </span>
                                 </div>
                             </div>
