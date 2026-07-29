@@ -892,8 +892,12 @@ export default function DailyRecordsView() {
                 const isCep = ev.cost_center === 'CEP';
                 const isEspecial = ev.cost_center === 'Servicios Especiales' || ev.cost_center === 'Quintas' || (ev.title && (ev.title.includes('Quintas') || ev.title.includes('Especiales')));
 
-                if (d.structured_data && Object.keys(d.structured_data).length > 0) {
-                    const sd = d.structured_data;
+                let sd = d.structured_data;
+                if (typeof sd === 'string') {
+                    try { sd = JSON.parse(sd); } catch(e) { sd = {}; }
+                }
+
+                if (sd && Object.keys(sd).length > 0) {
                     if (isEspecial || d.service_category_id === 2) {
                         p.choferesCenas += parseInt(sd.choferes?.cenas) || 0;
                         p.quintasCenas += parseInt(sd.quintas?.cenas) || 0;
@@ -1352,7 +1356,11 @@ export default function DailyRecordsView() {
                                                         ev.details.forEach((d: any) => {
                                                             const date = d.service_date.substring(0,10);
                                                             if (searchTerm && !date.includes(searchTerm)) return;
-                                                            itemsList.push({ evId: ev.id, date, observations: d.observations || '', structured_data: d.structured_data, service_category_id: d.service_category_id });
+                                                            let sd = d.structured_data;
+                                                            if (typeof sd === 'string') {
+                                                                try { sd = JSON.parse(sd); } catch(e) { sd = {}; }
+                                                            }
+                                                            itemsList.push({ evId: ev.id, date, observations: d.observations || '', structured_data: sd, service_category_id: d.service_category_id });
                                                         });
                                                     }
                                                 });

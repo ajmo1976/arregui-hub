@@ -74,7 +74,10 @@ export default function SingleRecordEditForm({ onClose, onSuccess, type, date }:
                 setEventId(ev.id);
                 setParentEvent(ev);
                 const obs = matchingDetail.observations || '';
-                const sd = matchingDetail.structured_data || {};
+                let sd = matchingDetail.structured_data || {};
+                if (typeof sd === 'string') {
+                    try { sd = JSON.parse(sd); } catch(e) { sd = {}; }
+                }
                 
                 if (type === 'metropolitano') {
                     setFormData({
