@@ -107,24 +107,25 @@ export default function MultiTypeRecordForm({ onClose, onSuccess, initialType, i
                             }
                         }
                     } else {
-                        const ev = existingEvents.find(e => e.details && e.details[0] && e.details[0].service_date.substring(0,10) === d);
+                        const ev = existingEvents.find(e => e.details && e.details.some((det: any) => det.service_date && det.service_date.substring(0,10) === d));
                         if (ev) {
                             eventId = ev.id;
+                            const matchingDetail = ev.details.find((det: any) => det.service_date && det.service_date.substring(0,10) === d) || ev.details[0];
                             if (recordType === 'metropolitano') {
-                                if (ev.details[0].structured_data) {
-                                    const sd = ev.details[0].structured_data;
+                                if (matchingDetail && matchingDetail.structured_data) {
+                                    const sd = matchingDetail.structured_data;
                                     plc = String(sd.plc || ''); sm = String(sd.sm || ''); cnPlanta = String(sd.cnPlanta || '');
                                     cenas = String(sd.cenas || ''); sc = String(sd.sc || ''); conc = String(sd.conc || '');
                                     cnExt = String(sd.cnExt || ''); csExt = String(sd.csExt || '');
                                 }
                             } else if (recordType === 'cep') {
-                                if (ev.details[0].structured_data) {
-                                    const sd = ev.details[0].structured_data;
+                                if (matchingDetail && matchingDetail.structured_data) {
+                                    const sd = matchingDetail.structured_data;
                                     sistemasCep = String(sd.sistemasCep || ''); segPlc = String(sd.segPlc || ''); segRuices = String(sd.segRuices || ''); segCentral = String(sd.segCentral || '');
                                 }
                             } else if (recordType === 'quintas') {
-                                if (ev.details[0].structured_data) {
-                                    const data = ev.details[0].structured_data;
+                                if (matchingDetail && matchingDetail.structured_data) {
+                                    const data = matchingDetail.structured_data;
                                     choferesCenas = String(data.choferes?.cenas || '');
                                     choferesDesayunos = String(data.choferes?.desayunos || '');
                                     pepsicoDesayunos = String(data.pepsico?.desayunos || '');
