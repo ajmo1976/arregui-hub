@@ -111,15 +111,15 @@ export default function Dashboard() {
     }
 
     const revenueData = [
-        { name: 'Almuerzos', value: data?.lunch_revenue || 0 },
-        { name: 'Servicios', value: data?.services_revenue || 0 },
-        { name: 'Delivery', value: data?.delivery_revenue || 0 },
-        { name: 'Desayunos', value: data?.breakfast_revenue || 0 },
+        { name: 'Comedor (Presencial)', value: data?.lunch_revenue || 0 },
+        { name: 'Servicios (Catering)', value: data?.services_revenue || 0 },
+        { name: 'Delivery (Total)', value: data?.delivery_revenue || 0 },
+        { name: 'Desayunos (Comedor)', value: data?.breakfast_revenue || 0 },
     ].filter(item => item.value > 0);
 
     const mainStats = [
         {
-            title: 'Ingresos Almuerzos',
+            title: 'Ingresos Comedor (Presencial)',
             value: formatPrice(data?.lunch_revenue || 0),
             trend: data?.trends.lunches || '+0%',
             icon: Utensils,
@@ -128,7 +128,7 @@ export default function Dashboard() {
             dataKey: 'income_lunch'
         },
         {
-            title: 'Cantidad de Platos',
+            title: 'Cantidad Total de Platos (Comedor + Delivery)',
             value: (data?.lunches || 0).toString(),
             trend: data?.trends.lunches || '+0%',
             icon: Utensils,
@@ -137,7 +137,7 @@ export default function Dashboard() {
             dataKey: 'qty_lunch'
         },
         {
-            title: 'Facturación de Delivery',
+            title: 'Facturación Total Delivery (Planificación + Comedor Del.)',
             value: formatPrice(data?.delivery_revenue || 0),
             trend: data?.trends.revenue || '+0%',
             icon: Truck,
@@ -146,7 +146,7 @@ export default function Dashboard() {
             dataKey: 'income_del'
         },
         {
-            title: 'Facturación de Servicios',
+            title: 'Facturación Servicios (Catering)',
             value: formatPrice(data?.services_revenue || 0),
             trend: data?.trends.services || '+0%',
             icon: Calendar,
@@ -155,7 +155,7 @@ export default function Dashboard() {
             dataKey: 'income_srv'
         },
         {
-            title: 'Cantidad de Servicios',
+            title: 'Cantidad de Servicios (Catering)',
             value: (data?.services_count || 0).toString(),
             trend: data?.trends.services || '+0%',
             icon: Calendar,
@@ -164,7 +164,7 @@ export default function Dashboard() {
             dataKey: 'qty_srv'
         },
         {
-            title: 'Facturación Desayunos',
+            title: 'Facturación Desayunos (Comedor)',
             value: formatPrice(data?.breakfast_revenue || 0),
             trend: data?.trends.revenue || '+0%',
             icon: Coffee,

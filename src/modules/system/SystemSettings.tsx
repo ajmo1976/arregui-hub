@@ -35,6 +35,27 @@ const PARAMETER_GROUPS = [
     { id: 'tax_rate', label: 'Impuestos (IVA)', icon: Percent },
 ];
 
+const MEAL_TYPES_MAP: Record<string, string> = {
+    'almuerzo_comedor': 'Almuerzos Comedor',
+    'cenas_choferes': 'Cenas (Choferes)',
+    'cenas_quintas': 'Cenas (Quintas)',
+    'almuerzos_pilotos': 'Almuerzos (Pilotos)',
+    'sistemas_cep': 'Sist. CEP (Sistemas CEP)',
+    'seguridad_plc': 'Seg. PLC (Seguridad PLC)',
+    'seguridad_ruices': 'Seguridad AG. PCV Los Ruices',
+    'seguridad_central': 'Seguridad Central Operaciones CEP',
+    'plc': 'PLC',
+    'sm_almuerzos': 'SM (Almuerzos)',
+    'sm_cenas': 'SM (Cenas)',
+    'sm_sobre_cenas': 'SM (Sobre Cenas)',
+    'col_norte': 'Col Norte',
+    'concentrados': 'Concentrados',
+    'col_norte_ext': 'Col Norte (EXT)',
+    'col_sur': 'Col Sur',
+    'ESTANDAR': 'Estándar (Legacy)',
+    'SOBRE_CENA': 'Sobre Cena (Legacy)',
+};
+
 export default function SystemSettings() {
     const [loading, setLoading] = useState(false);
     const [activeMainTab, setActiveMainTab] = useState('notificaciones');
@@ -51,11 +72,12 @@ export default function SystemSettings() {
     });
 
     const [newPrice, setNewPrice] = useState({
-        type: 'ESTANDAR',
+        type: 'almuerzo_comedor',
         price: 0,
         effective_date: new Date().toISOString().split('T')[0]
     });
     const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+    const [selectedConceptOption, setSelectedConceptOption] = useState('almuerzo_comedor');
 
     const [rates, setRates] = useState<any[]>([]);
     const [lastSync, setLastSync] = useState<string | null>(null);
@@ -215,8 +237,24 @@ export default function SystemSettings() {
         }
     };
 
-    const currentStandard = prices.find(p => p.type === 'ESTANDAR')?.price || 0;
-    const currentOverDinner = prices.find(p => p.type === 'SOBRE_CENA')?.price || 0;
+    const getLatestPrices = () => {
+        const latest: Record<string, any> = {};
+        [...prices].sort((a, b) => a.effective_date.localeCompare(b.effective_date)).forEach(p => {
+            latest[p.type] = p;
+        });
+        return Object.values(latest);
+    };
+    const latestPrices = getLatestPrices();
+
+    const openPriceModal = () => {
+        setNewPrice({
+            type: 'almuerzo_comedor',
+            price: 0,
+            effective_date: new Date().toISOString().split('T')[0]
+        });
+        setSelectedConceptOption('almuerzo_comedor');
+        setIsPriceModalOpen(true);
+    };
 
     return (
         <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0B0E14] font-inter antialiased">
@@ -278,69 +316,84 @@ export default function SystemSettings() {
 
                                     {activeParamTab === 'prices' && (
                                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                            {/* Price Layout from Image */}
-                                            <div className="flex flex-wrap items-center gap-4">
-                                                <div className="flex-1 min-w-[200px] bg-green-50/50 dark:bg-green-900/10 p-6 rounded-[1.5rem] border border-green-100 dark:border-green-900/20">
-                                                    <p className="text-green-500 text-[10px] font-black uppercase tracking-widest mb-2">Precio Estándar (Almuerzo/Cena)</p>
-                                                    <h3 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">${currentStandard.toFixed(2)}</h3>
-                                                </div>
-                                                <div className="flex-1 min-w-[200px] bg-orange-50/50 dark:bg-orange-900/10 p-6 rounded-[1.5rem] border border-orange-100 dark:border-orange-900/20">
-                                                    <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest mb-2">Precio Sobre Cena</p>
-                                                    <h3 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">${currentOverDinner.toFixed(2)}</h3>
-                                                </div>
-                                                <div className="ml-auto">
-                                                    <button
-                                                        onClick={() => setIsPriceModalOpen(true)}
-                                                        className="bg-[#4CAF50] hover:bg-[#43a047] text-white px-6 py-4 rounded-2xl font-bold text-sm shadow-xl shadow-green-500/20 flex items-center gap-2 transition-transform active:scale-95"
-                                                    >
-                                                        <Plus size={20} />
-                                                        Nuevo Precio
-                                                    </button>
-                                                </div>
+                                            {/* Header and Add Button */}
+                                            <div className="flex justify-between items-center">
+                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precios de Platos Vigentes</h4>
+                                                <button
+                                                    onClick={openPriceModal}
+                                                    className="bg-[#4CAF50] hover:bg-[#43a047] text-white px-6 py-4 rounded-2xl font-bold text-sm shadow-xl shadow-green-500/20 flex items-center gap-2 transition-transform active:scale-95"
+                                                >
+                                                    <Plus size={20} />
+                                                    Nuevo Precio
+                                                </button>
                                             </div>
 
-                                            {/* Table matching image style */}
-                                            <div className="border border-gray-100 dark:border-gray-800 rounded-3xl overflow-hidden shadow-sm">
-                                                <table className="w-full text-left">
-                                                    <thead>
-                                                        <tr className="bg-gray-50/50 dark:bg-gray-900/50 text-gray-400 font-bold text-[10px] uppercase tracking-widest">
-                                                            <th className="px-8 py-5">Fecha</th>
-                                                            <th className="px-8 py-5">Tipo</th>
-                                                            <th className="px-8 py-5">Precio</th>
-                                                            <th className="px-8 py-5">Registrado Por</th>
-                                                            <th className="px-8 py-5 sr-only">Acciones</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                                                        {prices.sort((a, b) => b.id - a.id).map((p) => (
-                                                            <tr key={p.id} className="group hover:bg-gray-50/20 dark:hover:bg-gray-800/20 transition-colors">
-                                                                <td className="px-8 py-5">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <Calendar size={16} className="text-gray-300" />
-                                                                        <span className="font-bold text-gray-700 dark:text-gray-300 text-sm">
-                                                                            {new Date(p.effective_date).toISOString().split('T')[0]}
-                                                                        </span>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-8 py-5">
-                                                                    <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${p.type === 'ESTANDAR'
-                                                                        ? 'bg-green-100/60 text-green-600'
-                                                                        : 'bg-orange-100/60 text-orange-600'
-                                                                        }`}>
-                                                                        {p.type === 'ESTANDAR' ? 'Estándar' : 'Sobre Cena'}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-8 py-5 font-black text-gray-900 dark:text-white text-sm">${p.price.toFixed(2)}</td>
-                                                                <td className="px-8 py-5 text-sm font-medium text-gray-500">Admin</td>
-                                                                <td className="px-8 py-5 text-right opacity-0 group-hover:opacity-100">
-                                                                    <button onClick={() => handleDeletePrice(p.id)} className="text-gray-300 hover:text-red-500 p-2">
-                                                                        <Trash2 size={16} />
-                                                                    </button>
-                                                                </td>
+                                            {/* Grid of active prices */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                                {latestPrices.map((p) => {
+                                                    const label = MEAL_TYPES_MAP[p.type] || p.type;
+                                                    const isLow = p.type === 'almuerzo_comedor' || p.type === 'sm_sobre_cenas';
+                                                    return (
+                                                        <div key={p.id} className={`p-5 rounded-[1.5rem] border transition-transform hover:scale-[1.02] ${
+                                                            isLow
+                                                                ? 'bg-green-50/40 dark:bg-green-900/10 border-green-100 dark:border-green-900/20'
+                                                                : 'bg-indigo-50/40 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/20'
+                                                        }`}>
+                                                            <p className={`text-[9px] font-black uppercase tracking-wider mb-2 ${
+                                                                isLow ? 'text-green-500' : 'text-indigo-500'
+                                                            }`}>{label}</p>
+                                                            <div className="flex items-baseline gap-1.5">
+                                                                <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">${p.price.toFixed(2)}</h3>
+                                                                <span className="text-[10px] text-gray-400 font-bold">USD</span>
+                                                            </div>
+                                                            <p className="text-[9px] text-gray-400 font-medium mt-1">Desde: {p.effective_date}</p>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Historical Table */}
+                                            <div className="space-y-4">
+                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Historial de Cambios</h4>
+                                                <div className="border border-gray-100 dark:border-gray-800 rounded-3xl overflow-hidden shadow-sm bg-white dark:bg-gray-900">
+                                                    <table className="w-full text-left">
+                                                        <thead>
+                                                            <tr className="bg-gray-50/50 dark:bg-gray-900/50 text-gray-400 font-bold text-[10px] uppercase tracking-widest">
+                                                                <th className="px-8 py-5">Fecha</th>
+                                                                <th className="px-8 py-5">Tipo / Plato</th>
+                                                                <th className="px-8 py-5">Precio</th>
+                                                                <th className="px-8 py-5">Registrado Por</th>
+                                                                <th className="px-8 py-5 sr-only">Acciones</th>
                                                             </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                                                            {prices.sort((a, b) => b.id - a.id).map((p) => (
+                                                                <tr key={p.id} className="group hover:bg-gray-50/20 dark:hover:bg-gray-800/20 transition-colors">
+                                                                    <td className="px-8 py-5">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <Calendar size={16} className="text-gray-300" />
+                                                                            <span className="font-bold text-gray-700 dark:text-gray-300 text-sm">
+                                                                                {new Date(p.effective_date).toISOString().split('T')[0]}
+                                                                            </span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-8 py-5">
+                                                                        <span className="font-bold text-gray-700 dark:text-gray-300 text-sm">
+                                                                            {MEAL_TYPES_MAP[p.type] || p.type}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-8 py-5 font-black text-gray-900 dark:text-white text-sm">${p.price.toFixed(2)}</td>
+                                                                    <td className="px-8 py-5 text-sm font-medium text-gray-500">Admin</td>
+                                                                    <td className="px-8 py-5 text-right opacity-0 group-hover:opacity-100">
+                                                                        <button onClick={() => handleDeletePrice(p.id)} className="text-gray-300 hover:text-red-500 p-2">
+                                                                            <Trash2 size={16} />
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -603,26 +656,43 @@ export default function SystemSettings() {
                             </div>
 
                             <form onSubmit={handleSavePrice} className="p-8 pt-0 space-y-8">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Modalidad</label>
-                                    <div className="grid grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-900 p-1.5 rounded-2xl">
-                                        {[
-                                            { id: 'ESTANDAR', label: 'Estándar' },
-                                            { id: 'SOBRE_CENA', label: 'Sobre Cena' }
-                                        ].map((opt) => (
-                                            <button
-                                                key={opt.id}
-                                                type="button"
-                                                onClick={() => setNewPrice({ ...newPrice, type: opt.id })}
-                                                className={`py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${newPrice.type === opt.id
-                                                    ? 'bg-white dark:bg-gray-800 text-[#4CAF50] shadow-sm'
-                                                    : 'text-gray-400 hover:text-gray-600'
-                                                    }`}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Plato / Concepto</label>
+                                        <select
+                                            className="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl px-5 py-4 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-green-500/20"
+                                            value={selectedConceptOption}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                setSelectedConceptOption(val);
+                                                if (val !== 'custom') {
+                                                    setNewPrice({ ...newPrice, type: val });
+                                                } else {
+                                                    setNewPrice({ ...newPrice, type: '' });
+                                                }
+                                            }}
+                                        >
+                                            <option value="" disabled>Seleccione un concepto...</option>
+                                             {Object.entries(MEAL_TYPES_MAP).map(([key, label]) => (
+                                                 <option key={key} value={key}>{label}</option>
+                                             ))}
+                                             <option value="custom">+ Crear nuevo concepto...</option>
+                                        </select>
                                     </div>
+
+                                    {selectedConceptOption === 'custom' && (
+                                         <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-widest">Nombre del Nuevo Concepto</label>
+                                             <input
+                                                 type="text"
+                                                 required
+                                                 className="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-2xl px-5 py-4 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-green-500/20"
+                                                 placeholder="Ej. Almuerzo Especial Feriado"
+                                                 value={newPrice.type}
+                                                 onChange={e => setNewPrice({ ...newPrice, type: e.target.value })}
+                                             />
+                                         </div>
+                                    )}
                                 </div>
 
                                 <div className="space-y-6">
