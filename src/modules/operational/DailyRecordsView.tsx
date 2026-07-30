@@ -1419,12 +1419,15 @@ export default function DailyRecordsView() {
                                         <tbody className="divide-y divide-gray-50 dark:divide-gray-800/40">
                                             {(() => {
                                                 const getDetailCategory = (d: any, ev: any) => {
-                                                    const obs = d.observations || '';
+                                                    const obs = (d.observations || '').toLowerCase();
+                                                    const cc = (ev.cost_center || '').toLowerCase();
+                                                    const title = (ev.title || '').toLowerCase();
                                                     let sd = d.structured_data || {};
                                                     if (typeof sd === 'string') {
                                                         try { sd = JSON.parse(sd); } catch(e) { sd = {}; }
                                                     }
 
+                                                    // 1. Structured Data Specific Keys
                                                     if (sd.sistemasCep !== undefined || sd.segPlc !== undefined || sd.segRuices !== undefined || sd.segCentral !== undefined) {
                                                         return 'cep';
                                                     }
@@ -1435,25 +1438,26 @@ export default function DailyRecordsView() {
                                                         return 'metropolitano';
                                                     }
 
-                                                    if (obs.includes('[DESGLOSE_PLANIFICACION_CEP:') || obs.includes('SISTEMAS_CEP=') || obs.includes('SEG_PLC=')) {
+                                                    // 2. Observations Explicit Tags
+                                                    if (obs.includes('[desglose_planificacion_cep:') || obs.includes('sistemas_cep=') || obs.includes('seg_plc=')) {
                                                         return 'cep';
                                                     }
-                                                    if (obs.includes('[JSON_QUINTAS:') || obs.includes('[JSON_ESPECIALES:')) {
+                                                    if (obs.includes('[json_quintas:') || obs.includes('[json_especiales:')) {
                                                         return 'quintas';
                                                     }
-                                                    if (obs.includes('[DESGLOSE_PLANIFICACION:') || (obs.includes('PLC=') && !obs.includes('SEG_PLC='))) {
+                                                    if (obs.includes('[desglose_planificacion:') || obs.includes('plc=')) {
                                                         return 'metropolitano';
                                                     }
 
+                                                    // 3. Category IDs
                                                     if (d.service_category_id === 3 || d.service_category_id === 163) return 'cep';
                                                     if (d.service_category_id === 2) return 'quintas';
-                                                    if (d.service_category_id === 4 || d.service_category_id === 164) return 'metropolitano';
+                                                    if (d.service_category_id === 4 || d.service_category_id === 164 || d.service_category_id === 1) return 'metropolitano';
 
-                                                    const cc = ev.cost_center || '';
-                                                    const title = ev.title || '';
-                                                    if (cc === 'CEP' || title.includes('CEP')) return 'cep';
-                                                    if (cc === 'Servicios Especiales' || cc === 'Quintas' || title.includes('Quintas') || title.includes('Especiales')) return 'quintas';
-                                                    if (cc === 'Metropolitano' || cc === 'Territorio Metropolitano' || title.includes('Metropolitano')) return 'metropolitano';
+                                                    // 4. Cost Center / Title / Observations text keywords
+                                                    if (cc.includes('cep') || title.includes('cep') || obs.includes('cep')) return 'cep';
+                                                    if (cc.includes('especial') || cc.includes('quinta') || title.includes('especial') || title.includes('quinta') || obs.includes('especial') || obs.includes('quinta')) return 'quintas';
+                                                    if (cc.includes('metro') || title.includes('metro') || obs.includes('metro')) return 'metropolitano';
 
                                                     return 'other';
                                                 };
@@ -1479,7 +1483,39 @@ export default function DailyRecordsView() {
                                                             if (typeof sd === 'string') {
                                                                 try { sd = JSON.parse(sd); } catch(e) { sd = {}; }
                                                             }
-                                                            itemsList.push({ evId: ev.id, date, observations: d.observations || '', structured_data: sd, service_category_id: d.service_category_id });
+                                                            itemsList.push({
+                                                                evId: ev.id,
+                                                                date,
+                                                                observations: d.observations || '',
+                                                                structured_data: sd,
+                                                                service_category_id: d.service_category_id,
+                                                                source: 'event'
+                                                            });
+                                                        });
+                                                    }
+                                                });
+
+                                                logs.forEach((log: any) => {
+                                                    const date = log.log_date ? log.log_date.substring(0, 10) : '';
+                                                    if (!date || (searchTerm && !date.includes(searchTerm))) return;
+
+                                                    let logCat = 'other';
+                                                    if (log.category_id === 163 || log.category_id === 3) logCat = 'cep';
+                                                    else if (log.category_id === 164 || log.category_id === 4 || log.category_id === 1) logCat = 'metropolitano';
+                                                    else if (log.category_id === 2) logCat = 'quintas';
+
+                                                    if (logCat !== activeListTab) return;
+
+                                                    const exists = itemsList.some(item => item.date === date);
+                                                    if (!exists) {
+                                                        itemsList.push({
+                                                            evId: log.id,
+                                                            date,
+                                                            observations: log.observations || '',
+                                                            structured_data: {},
+                                                            service_category_id: log.category_id,
+                                                            lunch_sold: log.lunch_sold,
+                                                            source: 'log'
                                                         });
                                                     }
                                                 });
@@ -1511,6 +1547,8 @@ export default function DailyRecordsView() {
                                                                     const total = data.reduce((acc: number, x: any) => acc + (x.qty || 0), 0);
                                                                     summaryText = `Total Personas: ${total}`;
                                                                 } catch(e) {}
+                                                            } else {
+                                                                summaryText = `Total Asistentes: ${item.lunch_sold || 0}`;
                                                             }
                                                         }
                                                     } else if (activeListTab === 'cep') {
@@ -1522,6 +1560,8 @@ export default function DailyRecordsView() {
                                                             if(matchCep) {
                                                                 const tot = parseInt(matchCep[1]) + parseInt(matchCep[2]) + parseInt(matchCep[3]) + parseInt(matchCep[4]);
                                                                 summaryText = `Total Platos: ${tot}`;
+                                                            } else {
+                                                                summaryText = `Total Platos: ${item.lunch_sold || 0}`;
                                                             }
                                                         }
                                                     } else if (activeListTab === 'metropolitano') {
@@ -1533,6 +1573,8 @@ export default function DailyRecordsView() {
                                                             if(match) {
                                                                 const tot = parseInt(match[1]) + parseInt(match[2]) + parseInt(match[3]) + parseInt(match[4]) + parseInt(match[5]) + parseInt(match[6]) + parseInt(match[7]) + parseInt(match[8]);
                                                                 summaryText = `Total Platos: ${tot}`;
+                                                            } else {
+                                                                summaryText = `Total Platos: ${item.lunch_sold || 0}`;
                                                             }
                                                         }
                                                     }
