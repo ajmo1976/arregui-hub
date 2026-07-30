@@ -49,7 +49,7 @@ export default function SingleRecordEditForm({ onClose, onSuccess, type, date }:
 
             if (type === 'metropolitano') {
                 ev = existingEvents.find((e: any) => {
-                    const isType = e.cost_center === 'Metropolitano' || (e.title && e.title.includes('Metropolitano')) || (e.details && e.details.some((d: any) => d.service_category_id === 4 || d.service_category_id === 1 || (d.observations && (d.observations.includes('DESGLOSE_PLANIFICACION:') || (d.observations.includes('PLC=') && !d.observations.includes('SEG_PLC='))))));
+                    const isType = e.cost_center === 'Metropolitano' || (e.title && e.title.includes('Metropolitano')) || (e.details && e.details.some((d: any) => d.service_category_id === 4 || d.service_category_id === 2 || (d.observations && (d.observations.includes('DESGLOSE_PLANIFICACION:') || (d.observations.includes('PLC=') && !d.observations.includes('SEG_PLC='))))));
                     if (!isType || !e.details) return false;
                     matchingDetail = e.details.find((d: any) => d.service_date && d.service_date.substring(0,10) === date);
                     return !!matchingDetail;

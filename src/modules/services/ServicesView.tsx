@@ -147,7 +147,9 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
 
         // Generate details section for each service
         const detailsSectionsHtml = filteredEvents.map(ev => {
-            const detailsHtml = (ev.details || []).map((d: any, idx: number) => {
+            const originalDetails = ev.details || [];
+            const details = originalDetails.filter(passDetailFilters);
+            const detailsHtml = details.map((d: any) => {
                 const dateStr = formatNeutralDate(d.service_date);
                 const itemsHtml = d.selected_items && d.selected_items.length > 0
                     ? d.selected_items.map((item: any) => {
@@ -156,10 +158,11 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
                     }).join('')
                     : '<li class="no-items">No hay ítems seleccionados</li>';
 
+                const originalIdx = originalDetails.indexOf(d);
                 return `
                     <div class="service-detail-block">
                         <div class="block-header">
-                            Servicio ${idx + 1} de ${ev.details.length}: ${dateStr} • ${d.service_time} • ${d.location} • ${d.attendees} PAX
+                            Servicio ${originalIdx + 1} de ${originalDetails.length}: ${dateStr} • ${d.service_time} • ${d.location} • ${d.attendees} PAX
                         </div>
                         <div class="block-body">
                             <div class="items-section">
@@ -413,8 +416,10 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
         const rows: string[] = [];
         
         filteredEvents.forEach(ev => {
-            const details = ev.details || [];
-            if (details.length === 0) {
+            const originalDetails = ev.details || [];
+            const details = originalDetails.filter(passDetailFilters);
+
+            if (originalDetails.length === 0) {
                 rows.push(`
                     <tr>
                         <td class="text-center font-bold">#${ev.id}</td>
@@ -427,14 +432,15 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
                     </tr>
                 `);
             } else {
-                details.forEach((d: any, idx: number) => {
+                details.forEach((d: any) => {
                     const dateStr = formatNeutralDate(d.service_date);
                     const timeStr = d.service_time || '';
                     const itemsText = d.selected_items && d.selected_items.length > 0
                         ? d.selected_items.map((item: any) => `${item.name} (x${item.quantity})`).join(', ')
                         : 'Sin menú';
                     
-                    const regId = details.length > 1 ? `#${ev.id}.${idx + 1}` : `#${ev.id}`;
+                    const originalIdx = originalDetails.indexOf(d);
+                    const regId = originalDetails.length > 1 ? `#${ev.id}.${originalIdx + 1}` : `#${ev.id}`;
 
                     rows.push(`
                         <tr>
@@ -953,11 +959,13 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
             let detailsHtml = '';
             let eventTotal = 0;
 
-            const details = event.details || [];
-            details.forEach((d: any, idx: number) => {
+            const originalDetails = event.details || [];
+            const details = originalDetails.filter(passDetailFilters);
+            details.forEach((d: any) => {
                 const dateStr = formatNeutralDate(d.service_date);
                 const timeStr = d.service_time || '';
-                const detailId = details.length > 1 ? `#${event.id}.${idx + 1}` : `#${event.id}`;
+                const originalIdx = originalDetails.indexOf(d);
+                const detailId = originalDetails.length > 1 ? `#${event.id}.${originalIdx + 1}` : `#${event.id}`;
                 const detailTotal = d.estimated_amount || 0;
                 eventTotal += detailTotal;
 
@@ -987,7 +995,7 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
                 detailsHtml += `
                     <div class="detail-section">
                         <div class="detail-header">
-                            <h2>${details.length > 1 ? `Servicio ${idx + 1} de ${details.length} (Reg. ${detailId})` : 'Detalle del Servicio'}</h2>
+                            <h2>${details.length > 1 ? `Servicio ${originalIdx + 1} de ${details.length} (Reg. ${detailId})` : 'Detalle del Servicio'}</h2>
                         </div>
                         ${details.length > 1 ? `
                         <div class="detail-meta-clean">
@@ -1147,16 +1155,18 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
                 ? new Date(event.request_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
                 : 'N/A';
 
-            const details = event.details || [];
-            details.forEach((d: any, idx: number) => {
+            const originalDetails = event.details || [];
+            const details = originalDetails.filter(passDetailFilters);
+            details.forEach((d: any) => {
                 const dateStr = formatNeutralDate(d.service_date);
                 const timeStr = d.service_time || '';
                 const location = d.location || 'N/A';
                 const attendees = d.attendees || 0;
+                const originalIdx = originalDetails.indexOf(d);
 
                 const items = d.selected_items && d.selected_items.length > 0 ? d.selected_items : [];
                 if (items.length === 0) {
-                    csvContent += `${event.id};"${(event.title || '').replace(/"/g, '""').replace(/;/g, ',')}";"${event.responsible || ''}";"${event.company || 'NO ESPECIFICADA'}";"${event.cost_center || 'NO ESPECIFICADO'}";${requestDateStr};"${event.status || ''}";"${event.invoice_number || ''}";Servicio ${idx + 1};${dateStr};${timeStr};${location};${attendees};Sin platos/snack registrados;0;Unidad;0;0;"${(d.additional_requirements || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ')}";"${(d.observations || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ')}"\r\n`;
+                    csvContent += `${event.id};"${(event.title || '').replace(/"/g, '""').replace(/;/g, ',')}";"${event.responsible || ''}";"${event.company || 'NO ESPECIFICADA'}";"${event.cost_center || 'NO ESPECIFICADO'}";${requestDateStr};"${event.status || ''}";"${event.invoice_number || ''}";Servicio ${originalIdx + 1};${dateStr};${timeStr};${location};${attendees};Sin platos/snack registrados;0;Unidad;0;0;"${(d.additional_requirements || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ')}";"${(d.observations || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ')}"\r\n`;
                 } else {
                     items.forEach((item: any) => {
                         const qty = item.quantity || 1;
@@ -1171,7 +1181,7 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
                         const reqs = (d.additional_requirements || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ');
                         const obs = (d.observations || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ');
 
-                        csvContent += `${event.id};"${eventTitle}";"${event.responsible || ''}";"${event.company || 'NO ESPECIFICADA'}";"${event.cost_center || 'NO ESPECIFICADO'}";${requestDateStr};"${event.status || ''}";"${event.invoice_number || ''}";Servicio ${idx + 1};${dateStr};${timeStr};${location};${attendees};"${itemName}";${qty};${unit};${price};${sub};"${reqs}";"${obs}"\r\n`;
+                        csvContent += `${event.id};"${eventTitle}";"${event.responsible || ''}";"${event.company || 'NO ESPECIFICADA'}";"${event.cost_center || 'NO ESPECIFICADO'}";${requestDateStr};"${event.status || ''}";"${event.invoice_number || ''}";Servicio ${originalIdx + 1};${dateStr};${timeStr};${location};${attendees};"${itemName}";${qty};${unit};${price};${sub};"${reqs}";"${obs}"\r\n`;
                     });
                 }
             });
@@ -1205,6 +1215,16 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
             }
         }
     }, [initialSelectedEventId, events, onClearRoute]);
+
+    const passDetailFilters = (d: any) => {
+        if (filterDate && getNeutralDateString(d.service_date) !== filterDate) {
+            return false;
+        }
+        if (filterLocation && !d.location?.toLowerCase().includes(filterLocation.toLowerCase())) {
+            return false;
+        }
+        return true;
+    };
 
     const filteredEvents = events
         .filter(ev => {

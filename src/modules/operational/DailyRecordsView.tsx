@@ -57,13 +57,38 @@ const parseObservations = (obs: string) => {
     return { t1: null, t2: null, t3: null, t4: null, manual: null, cleanObs: obs };
 };
 
-// Helper to find standard meal price for a date
-const getPriceForDate = (prices: any[], targetDate: string) => {
+// Helper to find meal price for a date and concept
+const getPriceForDate = (prices: any[], targetDate: string, concept: string) => {
     if (!prices || prices.length === 0) return 0;
-    const sameTypePrices = prices.filter(p =>
-        p.type.toUpperCase() === 'ESTANDAR' || p.type === 'Estándar'
+    
+    // Compare case-insensitively
+    let sameTypePrices = prices.filter(p =>
+        p.type.toLowerCase() === concept.toLowerCase()
     );
+    
+    // Fallback: If not found, and the requested concept is 'almuerzo_comedor', fallback to 'ESTANDAR'
+    if (sameTypePrices.length === 0 && concept.toLowerCase() === 'almuerzo_comedor') {
+        sameTypePrices = prices.filter(p =>
+            p.type.toUpperCase() === 'ESTANDAR' || p.type === 'Estándar'
+        );
+    }
+    
+    // Fallback: If not found, and the requested concept is 'sm_sobre_cenas', fallback to 'SOBRE_CENA'
+    if (sameTypePrices.length === 0 && concept.toLowerCase() === 'sm_sobre_cenas') {
+        sameTypePrices = prices.filter(p =>
+            p.type.toUpperCase() === 'SOBRE_CENA' || p.type === 'Sobre Cena'
+        );
+    }
+    
+    // General fallback: return 'ESTANDAR' if still empty
+    if (sameTypePrices.length === 0) {
+        sameTypePrices = prices.filter(p =>
+            p.type.toUpperCase() === 'ESTANDAR' || p.type === 'Estándar'
+        );
+    }
+    
     if (sameTypePrices.length === 0) return 0;
+    
     const pastPrices = sameTypePrices
         .filter(p => p.effective_date <= targetDate)
         .sort((a, b) => b.effective_date.localeCompare(a.effective_date));
@@ -336,15 +361,44 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
         const totalCep = plan.sistemasCep + plan.seguridadPlc + plan.seguridadRuices + plan.seguridadCentralCep;
         const totalMetro = plan.plc + plan.sm + plan.cnPlanta + plan.cenas + plan.sc + plan.conc + plan.cnExt + plan.csExt;
 
-        // Total Gral: Sum of dining room (real lunchSold if logged, otherwise fallback to planned plc) + all planned delivery columns
-        const diningRoomTotal = log ? real.lunchSold : plan.plc;
-        const totalGral = diningRoomTotal + plan.sm + plan.cnPlanta + plan.cenas + plan.sc + plan.conc + plan.cnExt + plan.csExt + plan.sistemasCep + plan.seguridadPlc + plan.seguridadRuices + plan.seguridadCentralCep + plan.quintas;
-        
-        // Resolve meal price for this date
-        const mealPrice = getPriceForDate(prices, date);
-        const billing = totalGral * mealPrice;
+        // Comedor billing (if log exists, lunchSold * almuerzo_comedor; if not, plan.plc * plc)
+        const comedorCount = log ? real.lunchSold : plan.plc;
+        const comedorConcept = log ? 'almuerzo_comedor' : 'plc';
+        const billingComedor = comedorCount * getPriceForDate(prices, date, comedorConcept);
 
+        // CEP billing
+        const billingCep = 
+            (plan.sistemasCep * getPriceForDate(prices, date, 'sistemas_cep')) +
+            (plan.seguridadPlc * getPriceForDate(prices, date, 'seguridad_plc')) +
+            (plan.seguridadRuices * getPriceForDate(prices, date, 'seguridad_ruices')) +
+            (plan.seguridadCentralCep * getPriceForDate(prices, date, 'seguridad_central'));
+
+        // Metropolitano Delivery (excluding PLC because PLC is handled in comedorCount!)
+        const billingMetroDelivery =
+            (plan.sm * getPriceForDate(prices, date, 'sm_almuerzos')) +
+            (plan.cnPlanta * getPriceForDate(prices, date, 'col_norte')) +
+            (plan.cenas * getPriceForDate(prices, date, 'sm_cenas')) +
+            (plan.sc * getPriceForDate(prices, date, 'sm_sobre_cenas')) +
+            (plan.conc * getPriceForDate(prices, date, 'concentrados')) +
+            (plan.cnExt * getPriceForDate(prices, date, 'col_norte_ext')) +
+            (plan.csExt * getPriceForDate(prices, date, 'col_sur'));
+
+        // Metropolitano Total (with PLC)
+        const billingMetroTotal = billingMetroDelivery + (plan.plc * getPriceForDate(prices, date, 'plc'));
+
+        // Quintas / Especiales
         const especialesDataForDate = plans.find(p => p.especialesData)?.especialesData || null;
+        const quintasData = especialesDataForDate || {};
+        const billingQuintas =
+            ((quintasData.choferes?.cenas || 0) * getPriceForDate(prices, date, 'cenas_choferes')) +
+            ((quintasData.quintas?.cenas || 0) * getPriceForDate(prices, date, 'cenas_quintas')) +
+            ((quintasData.pilotos?.almuerzos || 0) * getPriceForDate(prices, date, 'almuerzos_pilotos'));
+
+        const diningRoomTotal = comedorCount;
+        const totalGral = diningRoomTotal + plan.sm + plan.cnPlanta + plan.cenas + plan.sc + plan.conc + plan.cnExt + plan.csExt + plan.sistemasCep + plan.seguridadPlc + plan.seguridadRuices + plan.seguridadCentralCep + plan.quintas;
+
+        const billing = billingComedor + billingCep + billingMetroDelivery + billingQuintas;
+        const mealPrice = getPriceForDate(prices, date, 'almuerzo_comedor');
 
         return {
             date,
@@ -357,6 +411,10 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
             totalGral,
             mealPrice,
             billing,
+            billingComedor,
+            billingCep,
+            billingMetro: billingMetroTotal,
+            billingQuintas,
             hasLog: !!log,
             hasPlan: plans.length > 0
         };
@@ -387,13 +445,11 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
     }, 0);
 
     const totalBillingIncome = consolidatedData.reduce((acc, row) => {
-        const mealPrice = getPriceForDate(prices, row.date);
-        
         if (activeTab === 'resumen') return acc + row.billing;
-        if (activeTab === 'metropolitano') return acc + (row.totalMetro * mealPrice);
-        if (activeTab === 'cep') return acc + (row.totalCep * mealPrice);
-        if (activeTab === 'registros') return acc + ((row.real.lunchSold || row.plan.plc) * mealPrice);
-        if (activeTab === 'quintas') return acc + (row.totalQuintas * mealPrice);
+        if (activeTab === 'metropolitano') return acc + row.billingMetro;
+        if (activeTab === 'cep') return acc + row.billingCep;
+        if (activeTab === 'registros') return acc + row.billingComedor;
+        if (activeTab === 'quintas') return acc + row.billingQuintas;
         return acc;
     }, 0);
 
@@ -889,7 +945,7 @@ export default function DailyRecordsView() {
                         p.seguridadPlc += parseInt(sd.segPlc) || 0;
                         p.seguridadRuices += parseInt(sd.segRuices) || 0;
                         p.seguridadCentralCep += parseInt(sd.segCentral) || 0;
-                    } else if (isMetropolitano || d.service_category_id === 4 || d.service_category_id === 1) {
+                    } else if (isMetropolitano || d.service_category_id === 4 || d.service_category_id === 2) {
                         p.plc += parseInt(sd.plc) || 0;
                         p.sm += parseInt(sd.sm) || 0;
                         p.cnPlanta += parseInt(sd.cnPlanta) || 0;
@@ -1021,12 +1077,38 @@ export default function DailyRecordsView() {
     ]));
 
     const totalFacturacionPlatos = allDates.reduce((acc, date) => {
-        const mealPrice = getPriceForDate(prices, date);
         const log = logs.find(l => l.log_date && l.log_date.substring(0,10) === date);
         const p = parsedPlannings.find(pl => pl.date === date) || { plc:0, sm:0, cnPlanta:0, cenas:0, sc:0, conc:0, cnExt:0, csExt:0, sistemasCep:0, seguridadPlc:0, seguridadRuices:0, seguridadCentralCep:0, choferesCenas:0, quintasCenas:0, pilotosAlmuerzos:0 };
-        const comedor = log ? (log.lunch_sold || 0) : p.plc;
-        const delivery = p.sm + p.cnPlanta + p.cenas + p.sc + p.conc + p.cnExt + p.csExt + p.sistemasCep + p.seguridadPlc + p.seguridadRuices + p.seguridadCentralCep + p.choferesCenas + p.quintasCenas + p.pilotosAlmuerzos;
-        return acc + ((comedor + delivery) * mealPrice);
+        
+        // Comedor
+        const comedorCount = log ? (log.lunch_sold || 0) : p.plc;
+        const comedorConcept = log ? 'almuerzo_comedor' : 'plc';
+        const billingComedor = comedorCount * getPriceForDate(prices, date, comedorConcept);
+        
+        // CEP
+        const billingCep =
+            (p.sistemasCep * getPriceForDate(prices, date, 'sistemas_cep')) +
+            (p.seguridadPlc * getPriceForDate(prices, date, 'seguridad_plc')) +
+            (p.seguridadRuices * getPriceForDate(prices, date, 'seguridad_ruices')) +
+            (p.seguridadCentralCep * getPriceForDate(prices, date, 'seguridad_central'));
+            
+        // Metro Delivery (excluding PLC)
+        const billingMetroDelivery =
+            (p.sm * getPriceForDate(prices, date, 'sm_almuerzos')) +
+            (p.cnPlanta * getPriceForDate(prices, date, 'col_norte')) +
+            (p.cenas * getPriceForDate(prices, date, 'sm_cenas')) +
+            (p.sc * getPriceForDate(prices, date, 'sm_sobre_cenas')) +
+            (p.conc * getPriceForDate(prices, date, 'concentrados')) +
+            (p.cnExt * getPriceForDate(prices, date, 'col_norte_ext')) +
+            (p.csExt * getPriceForDate(prices, date, 'col_sur'));
+            
+        // Specials / Quintas
+        const billingQuintas =
+            ((p.choferesCenas || 0) * getPriceForDate(prices, date, 'cenas_choferes')) +
+            ((p.quintasCenas || 0) * getPriceForDate(prices, date, 'cenas_quintas')) +
+            ((p.pilotosAlmuerzos || 0) * getPriceForDate(prices, date, 'almuerzos_pilotos'));
+            
+        return acc + (billingComedor + billingCep + billingMetroDelivery + billingQuintas);
     }, 0);
 
     const StatCard = ({ title, value, icon: Icon, color, bg, trend, sparkData }: any) => (
@@ -1135,7 +1217,7 @@ export default function DailyRecordsView() {
                                     sparkData={parsedPlannings.slice(-7).reverse().map(p => ({ val: p.plc + p.sm + p.cnPlanta + p.cenas + p.sc + p.conc + p.cnExt + p.csExt + p.sistemasCep + p.seguridadPlc + p.seguridadRuices + p.seguridadCentralCep + p.choferesCenas + p.quintasCenas + p.pilotosAlmuerzos }))}
                                 />
                                 <StatCard
-                                    title="Facturación Platos"
+                                    title="Facturación Total (Comedor + Delivery)"
                                     value={formatPrice(totalFacturacionPlatos)}
                                     icon={DollarSign}
                                     color="text-indigo-500"
@@ -1319,7 +1401,7 @@ export default function DailyRecordsView() {
                                                 const ccFilter = typeMap[activeListTab];
                                                 const evs = planningEvents.filter((ev: any) => {
                                                     if (activeListTab === 'metropolitano') {
-                                                        return ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano' || (ev.title && ev.title.includes('Metropolitano')) || (ev.details && ev.details.some((d: any) => d.service_category_id === 4 || d.service_category_id === 1 || (d.observations && (d.observations.includes('DESGLOSE_PLANIFICACION:') || (d.observations.includes('PLC=') && !d.observations.includes('SEG_PLC='))))));
+                                                        return ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano' || (ev.title && ev.title.includes('Metropolitano')) || (ev.details && ev.details.some((d: any) => d.service_category_id === 4 || d.service_category_id === 2 || (d.observations && (d.observations.includes('DESGLOSE_PLANIFICACION:') || (d.observations.includes('PLC=') && !d.observations.includes('SEG_PLC='))))));
                                                     }
                                                     if (activeListTab === 'cep') {
                                                         return ev.cost_center === 'CEP' || (ev.title && ev.title.includes('CEP')) || (ev.details && ev.details.some((d: any) => d.service_category_id === 3 || (d.observations && d.observations.includes('DESGLOSE_PLANIFICACION_CEP:'))));

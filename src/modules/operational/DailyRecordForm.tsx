@@ -112,16 +112,31 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
         }
     };
 
-    // Helper to find the best price for a given type and date
-    const getPriceForDate = (type: 'ESTANDAR' | 'SOBRE_CENA', targetDate: string) => {
+    // Helper to find the best price for a given concept and date
+    const getPriceForDate = (concept: string, targetDate: string) => {
         if (!prices || prices.length === 0) return 0;
         
-        // Some tolerance for type names (case insensitive or common alternates)
-        const sameTypePrices = prices.filter(p =>
-            p.type.toUpperCase() === type ||
-            (type === 'ESTANDAR' && p.type === 'Estándar') ||
-            (type === 'SOBRE_CENA' && p.type === 'Sobre Cena')
+        let sameTypePrices = prices.filter(p =>
+            p.type.toLowerCase() === concept.toLowerCase()
         );
+
+        if (sameTypePrices.length === 0 && concept.toLowerCase() === 'almuerzo_comedor') {
+            sameTypePrices = prices.filter(p =>
+                p.type.toUpperCase() === 'ESTANDAR' || p.type === 'Estándar'
+            );
+        }
+
+        if (sameTypePrices.length === 0 && concept.toLowerCase() === 'sm_sobre_cenas') {
+            sameTypePrices = prices.filter(p =>
+                p.type.toUpperCase() === 'SOBRE_CENA' || p.type === 'Sobre Cena'
+            );
+        }
+
+        if (sameTypePrices.length === 0) {
+            sameTypePrices = prices.filter(p =>
+                p.type.toUpperCase() === 'ESTANDAR' || p.type === 'Estándar'
+            );
+        }
 
         if (sameTypePrices.length === 0) return 0;
 
@@ -135,13 +150,12 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
         }
 
         // Fallback: If no price exists BEFORE this date, use the earliest available price
-        // (Assumes the first price recorded is the 'initial' price for all past dates)
         const earliestPrice = [...sameTypePrices].sort((a, b) => a.effective_date.localeCompare(b.effective_date))[0];
         return earliestPrice?.price || 0;
     };
 
-    const standardPrice = getPriceForDate('ESTANDAR', formData.log_date);
-    const nightPrice = getPriceForDate('SOBRE_CENA', formData.log_date);
+    const standardPrice = getPriceForDate('almuerzo_comedor', formData.log_date);
+    const nightPrice = getPriceForDate('sm_sobre_cenas', formData.log_date);
     
     // Calculate lunch_sold dynamically from t1, t2, t3, t4, manual inputs
     const calculatedLunchSold = (parseInt(formData.t1) || 0) + 
