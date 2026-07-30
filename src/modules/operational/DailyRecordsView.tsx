@@ -1450,9 +1450,9 @@ export default function DailyRecordsView() {
                                                     }
 
                                                     // 3. Category IDs
-                                                    if (d.service_category_id === 3 || d.service_category_id === 163) return 'cep';
+                                                    if (d.service_category_id === 3) return 'cep';
                                                     if (d.service_category_id === 2) return 'quintas';
-                                                    if (d.service_category_id === 4 || d.service_category_id === 164 || d.service_category_id === 1) return 'metropolitano';
+                                                    if (d.service_category_id === 4 || d.service_category_id === 1) return 'metropolitano';
 
                                                     // 4. Cost Center / Title / Observations text keywords
                                                     if (cc.includes('cep') || title.includes('cep') || obs.includes('cep')) return 'cep';
@@ -1500,8 +1500,8 @@ export default function DailyRecordsView() {
                                                     if (!date || (searchTerm && !date.includes(searchTerm))) return;
 
                                                     let logCat = 'other';
-                                                    if (log.category_id === 163 || log.category_id === 3) logCat = 'cep';
-                                                    else if (log.category_id === 164 || log.category_id === 4 || log.category_id === 1) logCat = 'metropolitano';
+                                                    if (log.category_id === 3) logCat = 'cep';
+                                                    else if (log.category_id === 4 || log.category_id === 1) logCat = 'metropolitano';
                                                     else if (log.category_id === 2) logCat = 'quintas';
 
                                                     if (logCat !== activeListTab) return;
