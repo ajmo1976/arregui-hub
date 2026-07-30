@@ -74,7 +74,7 @@ export default function MultiTypeRecordForm({ onClose, onSuccess, initialType, i
                     existingEvents = (res.data || []).filter((e: any) => {
                         if (e.company !== 'Planificación') return false;
                         if (recordType === 'metropolitano') {
-                            return e.cost_center === 'Metropolitano' || (e.title && e.title.includes('Metropolitano')) || (e.details && e.details.some((d: any) => d.service_category_id === 4 || d.service_category_id === 2 || (d.observations && (d.observations.includes('DESGLOSE_PLANIFICACION:') || (d.observations.includes('PLC=') && !d.observations.includes('SEG_PLC='))))));
+                            return e.cost_center === 'Metropolitano' || (e.title && e.title.includes('Metropolitano')) || (e.details && e.details.some((d: any) => d.service_category_id === 4 || (d.observations && (d.observations.includes('DESGLOSE_PLANIFICACION:') || (d.observations.includes('PLC=') && !d.observations.includes('SEG_PLC='))))));
                         } else if (recordType === 'cep') {
                             return e.cost_center === 'CEP' || (e.title && e.title.includes('CEP')) || (e.details && e.details.some((d: any) => d.service_category_id === 3 || (d.observations && d.observations.includes('DESGLOSE_PLANIFICACION_CEP:'))));
                         } else if (recordType === 'quintas') {

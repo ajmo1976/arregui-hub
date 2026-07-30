@@ -1418,49 +1418,68 @@ export default function DailyRecordsView() {
                                         </thead>
                                         <tbody className="divide-y divide-gray-50 dark:divide-gray-800/40">
                                             {(() => {
+                                                const getDetailCategory = (d: any, ev: any) => {
+                                                    const obs = d.observations || '';
+                                                    let sd = d.structured_data || {};
+                                                    if (typeof sd === 'string') {
+                                                        try { sd = JSON.parse(sd); } catch(e) { sd = {}; }
+                                                    }
+
+                                                    if (sd.sistemasCep !== undefined || sd.segPlc !== undefined || sd.segRuices !== undefined || sd.segCentral !== undefined) {
+                                                        return 'cep';
+                                                    }
+                                                    if (sd.choferes !== undefined || sd.quintas !== undefined || sd.pilotos !== undefined || sd.pepsico !== undefined) {
+                                                        return 'quintas';
+                                                    }
+                                                    if (sd.plc !== undefined || sd.sm !== undefined || sd.cnPlanta !== undefined || sd.cenas !== undefined || sd.sc !== undefined || sd.conc !== undefined || sd.cnExt !== undefined || sd.csExt !== undefined) {
+                                                        return 'metropolitano';
+                                                    }
+
+                                                    if (obs.includes('[DESGLOSE_PLANIFICACION_CEP:') || obs.includes('SISTEMAS_CEP=') || obs.includes('SEG_PLC=')) {
+                                                        return 'cep';
+                                                    }
+                                                    if (obs.includes('[JSON_QUINTAS:') || obs.includes('[JSON_ESPECIALES:')) {
+                                                        return 'quintas';
+                                                    }
+                                                    if (obs.includes('[DESGLOSE_PLANIFICACION:') || (obs.includes('PLC=') && !obs.includes('SEG_PLC='))) {
+                                                        return 'metropolitano';
+                                                    }
+
+                                                    if (d.service_category_id === 3 || d.service_category_id === 163) return 'cep';
+                                                    if (d.service_category_id === 2) return 'quintas';
+                                                    if (d.service_category_id === 4 || d.service_category_id === 164) return 'metropolitano';
+
+                                                    const cc = ev.cost_center || '';
+                                                    const title = ev.title || '';
+                                                    if (cc === 'CEP' || title.includes('CEP')) return 'cep';
+                                                    if (cc === 'Servicios Especiales' || cc === 'Quintas' || title.includes('Quintas') || title.includes('Especiales')) return 'quintas';
+                                                    if (cc === 'Metropolitano' || cc === 'Territorio Metropolitano' || title.includes('Metropolitano')) return 'metropolitano';
+
+                                                    return 'other';
+                                                };
+
                                                 const typeMap = {
                                                     'quintas': 'Servicios Especiales',
                                                     'cep': 'CEP',
                                                     'metropolitano': 'Metropolitano'
                                                 };
                                                 const ccFilter = typeMap[activeListTab];
-                                                const evs = planningEvents.filter((ev: any) => {
-                                                    if (activeListTab === 'metropolitano') {
-                                                        return ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano' || (ev.title && ev.title.includes('Metropolitano')) || (ev.details && ev.details.some((d: any) => d.service_category_id === 4 || (d.observations && (d.observations.includes('DESGLOSE_PLANIFICACION:') || (d.observations.includes('PLC=') && !d.observations.includes('SEG_PLC='))))));
-                                                    }
-                                                    if (activeListTab === 'cep') {
-                                                        return ev.cost_center === 'CEP' || (ev.title && ev.title.includes('CEP')) || (ev.details && ev.details.some((d: any) => d.service_category_id === 3 || (d.observations && d.observations.includes('DESGLOSE_PLANIFICACION_CEP:'))));
-                                                    }
-                                                    if (activeListTab === 'quintas') {
-                                                        return ev.cost_center === 'Servicios Especiales' || ev.cost_center === 'Quintas' || (ev.title && (ev.title.includes('Quintas') || ev.title.includes('Especiales'))) || (ev.details && ev.details.some((d: any) => d.service_category_id === 2 || (d.observations && (d.observations.includes('[JSON_QUINTAS:') || d.observations.includes('[JSON_ESPECIALES:')))));
-                                                    }
-                                                    return ev.cost_center === typeMap[activeListTab as keyof typeof typeMap];
-                                                });
                                                 const itemsList: any[] = [];
-                                                evs.forEach((ev: any) => {
-                                                    if(ev.details) {
+                                                
+                                                planningEvents.forEach((ev: any) => {
+                                                    if (ev.details) {
                                                         ev.details.forEach((d: any) => {
                                                             const date = d.service_date.substring(0,10);
                                                             if (searchTerm && !date.includes(searchTerm)) return;
-                                                            const obs = d.observations || '';
 
-                                                            // Ensure detail belongs to active tab category
-                                                            if (activeListTab === 'metropolitano') {
-                                                                const isMetroDetail = d.service_category_id === 4 || ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano' || obs.includes('DESGLOSE_PLANIFICACION:') || (obs.includes('PLC=') && !obs.includes('SEG_PLC='));
-                                                                if (!isMetroDetail) return;
-                                                            } else if (activeListTab === 'cep') {
-                                                                const isCepDetail = d.service_category_id === 3 || ev.cost_center === 'CEP' || obs.includes('DESGLOSE_PLANIFICACION_CEP:') || obs.includes('SEG_PLC=');
-                                                                if (!isCepDetail) return;
-                                                            } else if (activeListTab === 'quintas') {
-                                                                const isQuintasDetail = d.service_category_id === 2 || ev.cost_center === 'Servicios Especiales' || ev.cost_center === 'Quintas' || obs.includes('[JSON_QUINTAS:') || obs.includes('[JSON_ESPECIALES:');
-                                                                if (!isQuintasDetail) return;
-                                                            }
+                                                            const category = getDetailCategory(d, ev);
+                                                            if (category !== activeListTab) return;
 
                                                             let sd = d.structured_data;
                                                             if (typeof sd === 'string') {
                                                                 try { sd = JSON.parse(sd); } catch(e) { sd = {}; }
                                                             }
-                                                            itemsList.push({ evId: ev.id, date, observations: obs, structured_data: sd, service_category_id: d.service_category_id });
+                                                            itemsList.push({ evId: ev.id, date, observations: d.observations || '', structured_data: sd, service_category_id: d.service_category_id });
                                                         });
                                                     }
                                                 });
