@@ -181,7 +181,13 @@ export const inventoryApi = {
     getAuditLogDetail: (id: number) => api.get(`/system/logs/${id}`),
 
     // Operational Records (Registros Diarios)
-    getDailyLogs: (query?: string) => api.get(`/operational${query ? `?query=${query}` : ''}`),
+    getDailyLogs: (query?: string, category_id?: number) => {
+        const params = new URLSearchParams();
+        if (query) params.append('query', query);
+        if (category_id !== undefined && category_id !== null) params.append('category_id', category_id.toString());
+        const queryString = params.toString();
+        return api.get(`/operational${queryString ? `?${queryString}` : ''}`);
+    },
     createDailyLog: (data: any) => api.post('/operational', data),
     updateDailyLog: (id: number, data: any) => api.patch(`/operational/${id}`, data),
     deleteDailyLog: (id: number) => api.delete(`/operational/${id}`),

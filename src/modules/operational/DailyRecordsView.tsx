@@ -25,19 +25,40 @@ import { useCurrency } from '../../contexts/CurrencyContext';
 export default function DailyRecordsView() {
     const { formatPrice } = useCurrency();
     const [logs, setLogs] = useState<any[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingLog, setEditingLog] = useState<any>(null);
 
     useEffect(() => {
-        fetchLogs();
+        fetchCategories();
     }, []);
 
-    const fetchLogs = async () => {
+    const fetchCategories = async () => {
+        try {
+            const res = await inventoryApi.getCateringCategories();
+            const fetched = Array.isArray(res.data) ? res.data : [];
+            setCategories(fetched);
+            // Default to first category if available
+            if (fetched.length > 0 && activeCategoryId === null) {
+                setActiveCategoryId(fetched[0].id);
+                fetchLogs(fetched[0].id);
+            } else {
+                fetchLogs(activeCategoryId);
+            }
+        } catch (err) {
+            console.error('Error fetching categories:', err);
+            fetchLogs(activeCategoryId);
+        }
+    };
+
+    const fetchLogs = async (catId?: number | null) => {
         try {
             setLoading(true);
-            const response = await inventoryApi.getDailyLogs();
+            const targetCatId = catId !== undefined ? catId : activeCategoryId;
+            const response = await inventoryApi.getDailyLogs(searchTerm, targetCatId ?? undefined);
             setLogs(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error('Error fetching daily logs:', error);
@@ -46,6 +67,11 @@ export default function DailyRecordsView() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleTabChange = (catId: number | null) => {
+        setActiveCategoryId(catId);
+        fetchLogs(catId);
     };
 
     const handleDelete = async (id: number) => {
@@ -149,7 +175,7 @@ export default function DailyRecordsView() {
                             Nuevo Registro
                         </button>
                         <button
-                            onClick={fetchLogs}
+                            onClick={() => fetchLogs(activeCategoryId)}
                             className="p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm"
                         >
                             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
@@ -188,6 +214,37 @@ export default function DailyRecordsView() {
                     />
                 </div>
 
+                {/* Tabs de Categorías */}
+                <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2 overflow-x-auto custom-scrollbar">
+                    {(() => {
+                        const tabList = categories.length > 0
+                            ? [{ id: null, name: 'TODAS' }, ...categories.map(c => ({ id: c.id, name: c.name.toUpperCase() }))]
+                            : [
+                                { id: null, name: 'TODAS' },
+                                { id: 1, name: 'ALMUERZOS COMEDOR' },
+                                { id: 2, name: 'SERVICIOS ESPECIALES' },
+                                { id: 163, name: 'CEP' },
+                                { id: 164, name: 'METROPOLITANO' }
+                            ];
+                        return tabList.map(tab => {
+                            const isActive = activeCategoryId === tab.id;
+                            return (
+                                <button
+                                    key={tab.id ?? 'all'}
+                                    onClick={() => handleTabChange(tab.id)}
+                                    className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                                        isActive
+                                            ? 'bg-white dark:bg-gray-800 text-primary border-primary shadow-sm scale-105'
+                                            : 'bg-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 border-transparent'
+                                    }`}
+                                >
+                                    {tab.name}
+                                </button>
+                            );
+                        });
+                    })()}
+                </div>
+
                 {/* Listado de Registros */}
                 <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
                     <div className="p-8 border-b border-gray-50 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gray-50/20">
@@ -220,7 +277,10 @@ export default function DailyRecordsView() {
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-gray-800/40">
                                 <AnimatePresence mode="popLayout">
-                                    {filteredLogs.map((log) => (
+                                    {filteredLogs.map((log) => {
+                                        const catObj = categories.find(c => c.id === log.category_id);
+                                        const catName = catObj ? catObj.name : (log.category_id ? `Categoría` : '');
+                                        return (
                                         <motion.tr
                                             key={log.id}
                                             initial={{ opacity: 0 }}
@@ -236,7 +296,7 @@ export default function DailyRecordsView() {
                                                     <div>
                                                         <p className="font-bold text-gray-900 dark:text-white capitalize">{formatDate(log.log_date)}</p>
                                                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-                                                            {log.observations ? 'Completado' : 'Sin notas'}
+                                                            {catName ? `${catName} (ID: ${log.id})` : `ID: ${log.id}`} {log.observations ? `• ${log.observations}` : ''}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -283,7 +343,8 @@ export default function DailyRecordsView() {
                                                 </div>
                                             </td>
                                         </motion.tr>
-                                    ))}
+                                        );
+                                    })}
                                 </AnimatePresence>
                                 {!loading && filteredLogs.length === 0 && (
                                     <tr>
@@ -292,7 +353,7 @@ export default function DailyRecordsView() {
                                                 <Calendar size={40} />
                                             </div>
                                             <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Sin registros</h3>
-                                            <p className="text-gray-400 text-sm font-medium mt-1">No hay datos operativos disponibles</p>
+                                            <p className="text-gray-400 text-sm font-medium mt-1">No hay datos operativos disponibles para esta categoría</p>
                                         </td>
                                     </tr>
                                 )}
@@ -307,10 +368,11 @@ export default function DailyRecordsView() {
                 {isFormOpen && (
                     <DailyRecordForm
                         initialData={editingLog}
+                        categoryId={activeCategoryId}
                         onClose={() => setIsFormOpen(false)}
                         onSuccess={() => {
                             setIsFormOpen(false);
-                            fetchLogs();
+                            fetchLogs(activeCategoryId);
                         }}
                     />
                 )}

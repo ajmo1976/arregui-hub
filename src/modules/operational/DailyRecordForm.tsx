@@ -16,11 +16,12 @@ interface DailyRecordFormProps {
     onClose: () => void;
     onSuccess: () => void;
     initialData?: any;
+    categoryId?: number | null;
 }
 
 import { useCurrency } from '../../contexts/CurrencyContext';
 
-export default function DailyRecordForm({ onClose, onSuccess, initialData }: DailyRecordFormProps) {
+export default function DailyRecordForm({ onClose, onSuccess, initialData, categoryId }: DailyRecordFormProps) {
     const { formatPrice, currency } = useCurrency();
     const isEdit = !!initialData;
     const [loading, setLoading] = useState(false);
@@ -28,6 +29,7 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
 
     const [formData, setFormData] = useState<any>({
         log_date: new Date().toISOString().split('T')[0],
+        category_id: categoryId ?? null,
         lunch_sold: '',
         breakfast_revenue: '',
         delivery_lunch: '',
@@ -41,11 +43,12 @@ export default function DailyRecordForm({ onClose, onSuccess, initialData }: Dai
         if (initialData) {
             setFormData({
                 ...initialData,
-                log_date: initialData.log_date.split('T')[0]
+                log_date: initialData.log_date.split('T')[0],
+                category_id: initialData.category_id ?? categoryId ?? null
             });
         }
         fetchPrices();
-    }, [initialData]);
+    }, [initialData, categoryId]);
 
     const fetchPrices = async () => {
         try {
