@@ -74,6 +74,8 @@ const getPriceForDate = (prices: any[], targetDate: string) => {
 
 interface WeeklyReportViewProps {
     logs: any[];
+    planningEvents: any[];
+    prices: any[];
     onClose: () => void;
     formatPrice: (price: number) => string;
 }
@@ -135,7 +137,7 @@ function ServiciosEspecialesDetailTable({ consolidatedData }: { consolidatedData
     );
 }
 
-function WeeklyReportView({ logs, onClose, formatPrice }: WeeklyReportViewProps) {
+function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }: WeeklyReportViewProps) {
     const [startDate, setStartDate] = useState(() => {
         const d = new Date();
         d.setDate(d.getDate() - 10); // Default to last 10 days
@@ -144,75 +146,67 @@ function WeeklyReportView({ logs, onClose, formatPrice }: WeeklyReportViewProps)
     const [endDate, setEndDate] = useState(() => {
         return new Date().toISOString().split('T')[0];
     });
-    const [planningDetails, setPlanningDetails] = useState<any[]>([]);
-    const [prices, setPrices] = useState<any[]>([]);
-    const [loadingPlanning, setLoadingPlanning] = useState(false);
     const [activeTab, setActiveTab] = useState<'resumen' | 'metropolitano' | 'cep' | 'quintas' | 'registros'>('resumen');
 
-    const fetchPrices = async () => {
-        try {
-            const response = await inventoryApi.getMealPrices();
-            setPrices(response.data || []);
-        } catch (error) {
-            console.error('Error fetching prices:', error);
-        }
-    };
+    const planningDetails = useMemo(() => {
+        const details: any[] = [];
+        planningEvents.forEach((ev: any) => {
+            (ev.details || []).forEach((d: any) => {
+                let plc = 0, sm = 0, cnPlanta = 0, cenas = 0, sc = 0, conc = 0, cnExt = 0, csExt = 0;
+                let sistemasCep = 0, seguridadPlc = 0, seguridadRuices = 0, seguridadCentralCep = 0;
+                let especialesData = null;
+                let totalEspeciales = 0;
 
-    const fetchPlanning = async () => {
-        try {
-            setLoadingPlanning(true);
-            const res = await inventoryApi.getServiceEvents();
-            
-            const planningEvents = res.data.filter((ev: any) => ev.company === 'Planificación');
-            
-            const details: any[] = [];
-            planningEvents.forEach((ev: any) => {
-                (ev.details || []).forEach((d: any) => {
-                    let plc = 0, sm = 0, cnPlanta = 0, cenas = 0, sc = 0, conc = 0, cnExt = 0, csExt = 0;
-                    let sistemasCep = 0, seguridadPlc = 0, seguridadRuices = 0, seguridadCentralCep = 0;
-                    let especialesData = null;
-                    let totalEspeciales = 0;
+                const isMetropolitano = ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano';
+                const isCep = ev.cost_center === 'CEP';
+                const isEspecial = ev.cost_center === 'Servicios Especiales' || ev.cost_center === 'Quintas' || (ev.title && (ev.title.includes('Quintas') || ev.title.includes('Especiales')));
 
-                    if (d.structured_data && Object.keys(d.structured_data).length > 0) {
-                        const sd = d.structured_data;
-                        if (d.service_category_id === 4 || (ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano')) {
-                            plc = parseInt(sd.plc) || 0;
-                            sm = parseInt(sd.sm) || 0;
-                            cnPlanta = parseInt(sd.cnPlanta) || 0;
-                            cenas = parseInt(sd.cenas) || 0;
-                            sc = parseInt(sd.sc) || 0;
-                            conc = parseInt(sd.conc) || 0;
-                            cnExt = parseInt(sd.cnExt) || 0;
-                            csExt = parseInt(sd.csExt) || 0;
-                        } else if (d.service_category_id === 3 || (ev.cost_center === 'CEP')) {
-                            sistemasCep = parseInt(sd.sistemasCep) || 0;
-                            seguridadPlc = parseInt(sd.segPlc) || 0;
-                            seguridadRuices = parseInt(sd.segRuices) || 0;
-                            seguridadCentralCep = parseInt(sd.segCentral) || 0;
-                        } else if (d.service_category_id === 2 || (ev.cost_center === 'Quintas' || ev.cost_center === 'Servicios Especiales')) {
-                            especialesData = sd;
-                            totalEspeciales = (parseInt(sd.choferes?.cenas)||0) + (parseInt(sd.quintas?.cenas)||0) + (parseInt(sd.pilotos?.almuerzos)||0);
-                        }
-                    } else {
-                        const obs = d.observations || '';
+                let sd = d.structured_data;
+                if (typeof sd === 'string') {
+                    try { sd = JSON.parse(sd); } catch (e) { sd = {}; }
+                }
+
+                if (sd && Object.keys(sd).length > 0) {
+                    if (d.service_category_id === 4 || isMetropolitano) {
+                        plc = parseInt(sd.plc) || 0;
+                        sm = parseInt(sd.sm) || 0;
+                        cnPlanta = parseInt(sd.cnPlanta || sd.colNortePlanta) || 0;
+                        cenas = parseInt(sd.cenas) || 0;
+                        sc = parseInt(sd.sc || sd.sobreCenas) || 0;
+                        conc = parseInt(sd.conc || sd.concentrados) || 0;
+                        cnExt = parseInt(sd.cnExt || sd.colNorteExt) || 0;
+                        csExt = parseInt(sd.csExt || sd.colSurExt) || 0;
+                    } else if (d.service_category_id === 3 || isCep) {
+                        sistemasCep = parseInt(sd.sistemasCep) || 0;
+                        seguridadPlc = parseInt(sd.segPlc) || 0;
+                        seguridadRuices = parseInt(sd.segRuices) || 0;
+                        seguridadCentralCep = parseInt(sd.segCentral) || 0;
+                    } else if (d.service_category_id === 2 || isEspecial) {
+                        especialesData = sd;
+                        totalEspeciales = (parseInt(sd.choferes?.cenas)||0) + (parseInt(sd.quintas?.cenas)||0) + (parseInt(sd.pilotos?.almuerzos)||0);
+                    }
+                } else {
+                    const obs = d.observations || '';
+                    if (isCep) {
                         const matchCep = obs.match(/\[DESGLOSE_PLANIFICACION_CEP:\s*SISTEMAS_CEP=(\d+),\s*SEG_PLC=(\d+),\s*SEG_RUICES=(\d+),\s*SEG_CENTRAL=(\d+)\]/);
-                        const match = obs.match(/\[DESGLOSE_PLANIFICACION:\s*PLC=(\d+),\s*SM=(\d+),\s*CN_PLANTA=(\d+),\s*CENAS=(\d+),\s*SC=(\d+),\s*CONC=(\d+),\s*CN_EXT=(\d+),\s*CS_EXT=(\d+)\]/);
-                        const matchEspeciales = obs.match(/\[JSON_ESPECIALES:(.*)\]/);
-
-                        if (matchEspeciales) {
-                            try {
-                                const data = JSON.parse(matchEspeciales[1]);
-                                especialesData = data;
-                                totalEspeciales = (parseInt(data.choferes?.cenas)||0) + (parseInt(data.quintas?.cenas)||0) + (parseInt(data.pilotos?.almuerzos)||0);
-                            } catch (e) {
-                                console.error('Error parsing Especiales JSON', e);
-                            }
-                        } else if (matchCep) {
+                        if (matchCep) {
                             sistemasCep = parseInt(matchCep[1]);
                             seguridadPlc = parseInt(matchCep[2]);
                             seguridadRuices = parseInt(matchCep[3]);
                             seguridadCentralCep = parseInt(matchCep[4]);
-                        } else if (match) {
+                        } else {
+                            const f1 = obs.match(/SISTEMAS_CEP=(\d+)/);
+                            const f2 = obs.match(/SEG_PLC=(\d+)/);
+                            const f3 = obs.match(/SEG_RUICES=(\d+)/);
+                            const f4 = obs.match(/SEG_CENTRAL=(\d+)/);
+                            sistemasCep = f1 ? parseInt(f1[1]) : 0;
+                            seguridadPlc = f2 ? parseInt(f2[1]) : 0;
+                            seguridadRuices = f3 ? parseInt(f3[1]) : 0;
+                            seguridadCentralCep = f4 ? parseInt(f4[1]) : 0;
+                        }
+                    } else if (isMetropolitano) {
+                        const match = obs.match(/\[DESGLOSE_PLANIFICACION:\s*PLC=(\d+),\s*SM=(\d+),\s*CN_PLANTA=(\d+),\s*CENAS=(\d+),\s*SC=(\d+),\s*CONC=(\d+),\s*CN_EXT=(\d+),\s*CS_EXT=(\d+)\]/);
+                        if (match) {
                             plc = parseInt(match[1]);
                             sm = parseInt(match[2]);
                             cnPlanta = parseInt(match[3]);
@@ -222,70 +216,61 @@ function WeeklyReportView({ logs, onClose, formatPrice }: WeeklyReportViewProps)
                             cnExt = parseInt(match[7]);
                             csExt = parseInt(match[8]);
                         } else {
-                            const f1 = obs.match(/SISTEMAS_CEP=(\d+)/);
-                            const f2 = obs.match(/SEG_PLC=(\d+)/);
-                            const f3 = obs.match(/SEG_RUICES=(\d+)/);
-                            const f4 = obs.match(/SEG_CENTRAL=(\d+)/);
-                            if (f1 || f2 || f3 || f4) {
-                                sistemasCep = f1 ? parseInt(f1[1]) : 0;
-                                seguridadPlc = f2 ? parseInt(f2[1]) : 0;
-                                seguridadRuices = f3 ? parseInt(f3[1]) : 0;
-                                seguridadCentralCep = f4 ? parseInt(f4[1]) : 0;
-                            } else {
-                                const fallbackPlc = obs.match(/PLC=(\d+)/);
-                                const fallbackSm = obs.match(/SM=(\d+)/);
-                                const fallbackCnPlanta = obs.match(/CN_PLANTA=(\d+)/);
-                                const fallbackCenas = obs.match(/CENAS=(\d+)/);
-                                const fallbackSc = obs.match(/SC=(\d+)/);
-                                const fallbackConc = obs.match(/CONC=(\d+)/);
-                                const fallbackCnExt = obs.match(/CN_EXT=(\d+)/);
-                                const fallbackCsExt = obs.match(/CS_EXT=(\d+)/);
-                                
-                                plc = fallbackPlc ? parseInt(fallbackPlc[1]) : 0;
-                                sm = fallbackSm ? parseInt(fallbackSm[1]) : 0;
-                                cnPlanta = fallbackCnPlanta ? parseInt(fallbackCnPlanta[1]) : 0;
-                                cenas = fallbackCenas ? parseInt(fallbackCenas[1]) : 0;
-                                sc = fallbackSc ? parseInt(fallbackSc[1]) : 0;
-                                conc = fallbackConc ? parseInt(fallbackConc[1]) : 0;
-                                cnExt = fallbackCnExt ? parseInt(fallbackCnExt[1]) : 0;
-                                csExt = fallbackCsExt ? parseInt(fallbackCsExt[1]) : 0;
+                            const fallbackPlc = obs.match(/PLC=(\d+)/);
+                            const fallbackSm = obs.match(/SM=(\d+)/);
+                            const fallbackCnPlanta = obs.match(/CN_PLANTA=(\d+)/);
+                            const fallbackCenas = obs.match(/CENAS=(\d+)/);
+                            const fallbackSc = obs.match(/SC=(\d+)/);
+                            const fallbackConc = obs.match(/CONC=(\d+)/);
+                            const fallbackCnExt = obs.match(/CN_EXT=(\d+)/);
+                            const fallbackCsExt = obs.match(/CS_EXT=(\d+)/);
+                            
+                            plc = fallbackPlc ? parseInt(fallbackPlc[1]) : 0;
+                            sm = fallbackSm ? parseInt(fallbackSm[1]) : 0;
+                            cnPlanta = fallbackCnPlanta ? parseInt(fallbackCnPlanta[1]) : 0;
+                            cenas = fallbackCenas ? parseInt(fallbackCenas[1]) : 0;
+                            sc = fallbackSc ? parseInt(fallbackSc[1]) : 0;
+                            conc = fallbackConc ? parseInt(fallbackConc[1]) : 0;
+                            cnExt = fallbackCnExt ? parseInt(fallbackCnExt[1]) : 0;
+                            csExt = fallbackCsExt ? parseInt(fallbackCsExt[1]) : 0;
+                        }
+                    } else if (isEspecial) {
+                        const matchEspeciales = obs.match(/\[JSON_ESPECIALES:(.*)\]/) || obs.match(/\[JSON_QUINTAS:(.*)\]/);
+                        if (matchEspeciales) {
+                            try {
+                                const data = JSON.parse(matchEspeciales[1]);
+                                especialesData = data;
+                                totalEspeciales = (parseInt(data.choferes?.cenas)||0) + (parseInt(data.quintas?.cenas)||0) + (parseInt(data.pilotos?.almuerzos)||0);
+                            } catch (e) {
+                                console.error('Error parsing Especiales JSON', e);
                             }
                         }
                     }
-                    
-                    details.push({
-                        date: d.service_date.substring(0, 10),
-                        plc,
-                        sm,
-                        cnPlanta,
-                        cenas,
-                        sc,
-                        conc,
-                        cnExt,
-                        csExt,
-                        sistemasCep,
-                        seguridadPlc,
-                        seguridadRuices,
-                        seguridadCentralCep,
-                        totalEspeciales,
-                        especialesData,
-                        total: d.attendees || (plc + sm + cnPlanta + cenas + sc + conc + cnExt + csExt + sistemasCep + seguridadPlc + seguridadRuices + seguridadCentralCep + totalEspeciales)
-                    });
+                }
+
+                details.push({
+                    date: d.service_date.substring(0, 10),
+                    plc,
+                    sm,
+                    cnPlanta,
+                    cenas,
+                    sc,
+                    conc,
+                    cnExt,
+                    csExt,
+                    sistemasCep,
+                    seguridadPlc,
+                    seguridadRuices,
+                    seguridadCentralCep,
+                    totalEspeciales,
+                    especialesData,
+                    total: d.attendees || (plc + sm + cnPlanta + cenas + sc + conc + cnExt + csExt + sistemasCep + seguridadPlc + seguridadRuices + seguridadCentralCep + totalEspeciales)
                 });
             });
-            setPlanningDetails(details);
-        } catch (err) {
-            console.error("Error loading planning events:", err);
-            toast.error("No se pudo cargar la planificación semanal");
-        } finally {
-            setLoadingPlanning(false);
-        }
-    };
+        });
+        return details;
+    }, [planningEvents]);
 
-    useEffect(() => {
-        fetchPlanning();
-        fetchPrices();
-    }, []);
 
     // Helper for robust date comparison
     const isDateInRange = (dateStr: string, start: string, end: string) => {
@@ -685,13 +670,7 @@ function WeeklyReportView({ logs, onClose, formatPrice }: WeeklyReportViewProps)
 
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
-                            {loadingPlanning ? (
-                                <tr>
-                                    <td colSpan={24} className="py-12 text-center text-gray-400">
-                                        <Loader2 className="animate-spin inline-block mr-2" size={16} /> Cargando datos consolidados...
-                                    </td>
-                                </tr>
-                            ) : consolidatedData.length === 0 ? (
+                            {consolidatedData.length === 0 ? (
                                 <tr>
                                     <td colSpan={24} className="py-12 text-center text-gray-400 font-medium">
                                         No hay datos en el rango seleccionado.
@@ -1536,6 +1515,8 @@ export default function DailyRecordsView() {
                         >
                             <WeeklyReportView
                                 logs={logs}
+                                planningEvents={planningEvents}
+                                prices={prices}
                                 onClose={() => setViewMode('list')}
                                 formatPrice={formatPrice}
                             />
