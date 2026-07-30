@@ -78,6 +78,72 @@ export default function SingleRecordEditForm({ onClose, onSuccess, type, date }:
                 if (typeof sd === 'string') {
                     try { sd = JSON.parse(sd); } catch(e) { sd = {}; }
                 }
+
+                if (!sd || Object.keys(sd).length === 0) {
+                    const matchCep = obs.match(/\[DESGLOSE_PLANIFICACION_CEP:\s*SISTEMAS_CEP=(\d+),\s*SEG_PLC=(\d+),\s*SEG_RUICES=(\d+),\s*SEG_CENTRAL=(\d+)\]/);
+                    const match = obs.match(/\[DESGLOSE_PLANIFICACION:\s*PLC=(\d+),\s*SM=(\d+),\s*CN_PLANTA=(\d+),\s*CENAS=(\d+),\s*SC=(\d+),\s*CONC=(\d+),\s*CN_EXT=(\d+),\s*CS_EXT=(\d+)\]/);
+                    const matchEspeciales = obs.match(/\[JSON_ESPECIALES:(.*)\]/) || obs.match(/\[JSON_QUINTAS:(.*)\]/);
+                    
+                    if (matchCep) {
+                        sd = {
+                            sistemasCep: parseInt(matchCep[1]) || 0,
+                            segPlc: parseInt(matchCep[2]) || 0,
+                            segRuices: parseInt(matchCep[3]) || 0,
+                            segCentral: parseInt(matchCep[4]) || 0
+                        };
+                    } else if (match) {
+                        sd = {
+                            plc: parseInt(match[1]) || 0,
+                            sm: parseInt(match[2]) || 0,
+                            cnPlanta: parseInt(match[3]) || 0,
+                            cenas: parseInt(match[4]) || 0,
+                            sc: parseInt(match[5]) || 0,
+                            conc: parseInt(match[6]) || 0,
+                            cnExt: parseInt(match[7]) || 0,
+                            csExt: parseInt(match[8]) || 0
+                        };
+                    } else if (matchEspeciales) {
+                        try {
+                            sd = JSON.parse(matchEspeciales[1]);
+                        } catch (e) {
+                            sd = {};
+                        }
+                    } else {
+                        const f1 = obs.match(/SISTEMAS_CEP=(\d+)/);
+                        const f2 = obs.match(/SEG_PLC=(\d+)/);
+                        const f3 = obs.match(/SEG_RUICES=(\d+)/);
+                        const f4 = obs.match(/SEG_CENTRAL=(\d+)/);
+                        if (f1 || f2 || f3 || f4) {
+                            sd = {
+                                sistemasCep: f1 ? parseInt(f1[1]) : 0,
+                                segPlc: f2 ? parseInt(f2[1]) : 0,
+                                segRuices: f3 ? parseInt(f3[1]) : 0,
+                                segCentral: f4 ? parseInt(f4[1]) : 0
+                            };
+                        } else {
+                            const fallbackPlc = obs.match(/PLC=(\d+)/);
+                            const fallbackSm = obs.match(/SM=(\d+)/);
+                            const fallbackCnPlanta = obs.match(/CN_PLANTA=(\d+)/);
+                            const fallbackCenas = obs.match(/CENAS=(\d+)/);
+                            const fallbackSc = obs.match(/SC=(\d+)/);
+                            const fallbackConc = obs.match(/CONC=(\d+)/);
+                            const fallbackCnExt = obs.match(/CN_EXT=(\d+)/);
+                            const fallbackCsExt = obs.match(/CS_EXT=(\d+)/);
+                            if (fallbackPlc || fallbackSm || fallbackCnPlanta || fallbackCenas || fallbackSc || fallbackConc || fallbackCnExt || fallbackCsExt) {
+                                sd = {
+                                    plc: fallbackPlc ? parseInt(fallbackPlc[1]) : 0,
+                                    sm: fallbackSm ? parseInt(fallbackSm[1]) : 0,
+                                    cnPlanta: fallbackCnPlanta ? parseInt(fallbackCnPlanta[1]) : 0,
+                                    cenas: fallbackCenas ? parseInt(fallbackCenas[1]) : 0,
+                                    sc: fallbackSc ? parseInt(fallbackSc[1]) : 0,
+                                    conc: fallbackConc ? parseInt(fallbackConc[1]) : 0,
+                                    cnExt: fallbackCnExt ? parseInt(fallbackCnExt[1]) : 0,
+                                    csExt: fallbackCsExt ? parseInt(fallbackCsExt[1]) : 0
+                                };
+                            }
+                        }
+                    }
+                }
                 
                 if (type === 'metropolitano') {
                     setFormData({

@@ -746,52 +746,75 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
             let plc = 0, sm = 0, cnPlanta = 0, cenas = 0, sc = 0, conc = 0, cnExt = 0, csExt = 0;
             let sistemasCep = 0, seguridadPlc = 0, seguridadRuices = 0, seguridadCentralCep = 0;
 
-            if (isCep) {
-                const matchCep = obs.match(/\[DESGLOSE_PLANIFICACION_CEP:\s*SISTEMAS_CEP=(\d+),\s*SEG_PLC=(\d+),\s*SEG_RUICES=(\d+),\s*SEG_CENTRAL=(\d+)\]/);
-                if (matchCep) {
-                    sistemasCep = parseInt(matchCep[1]);
-                    seguridadPlc = parseInt(matchCep[2]);
-                    seguridadRuices = parseInt(matchCep[3]);
-                    seguridadCentralCep = parseInt(matchCep[4]);
+            let sd = d.structured_data;
+            if (typeof sd === 'string') {
+                try { sd = JSON.parse(sd); } catch(e) { sd = {}; }
+            }
+
+            if (sd && Object.keys(sd).length > 0) {
+                if (isCep) {
+                    sistemasCep = parseInt(sd.sistemasCep) || 0;
+                    seguridadPlc = parseInt(sd.segPlc || sd.seguridadPlc) || 0;
+                    seguridadRuices = parseInt(sd.segRuices || sd.seguridadRuices) || 0;
+                    seguridadCentralCep = parseInt(sd.segCentral || sd.seguridadCentralCep) || 0;
                 } else {
-                    const f1 = obs.match(/SISTEMAS_CEP=(\d+)/);
-                    const f2 = obs.match(/SEG_PLC=(\d+)/);
-                    const f3 = obs.match(/SEG_RUICES=(\d+)/);
-                    const f4 = obs.match(/SEG_CENTRAL=(\d+)/);
-                    sistemasCep = f1 ? parseInt(f1[1]) : 0;
-                    seguridadPlc = f2 ? parseInt(f2[1]) : 0;
-                    seguridadRuices = f3 ? parseInt(f3[1]) : 0;
-                    seguridadCentralCep = f4 ? parseInt(f4[1]) : 0;
+                    plc = parseInt(sd.plc) || 0;
+                    sm = parseInt(sd.sm) || 0;
+                    cnPlanta = parseInt(sd.cnPlanta || sd.colNortePlanta) || 0;
+                    cenas = parseInt(sd.cenas) || 0;
+                    sc = parseInt(sd.sc || sd.sobreCenas) || 0;
+                    conc = parseInt(sd.conc || sd.concentrados) || 0;
+                    cnExt = parseInt(sd.cnExt || sd.colNorteExt) || 0;
+                    csExt = parseInt(sd.csExt || sd.colSurExt) || 0;
                 }
             } else {
-                const match = obs.match(/\[DESGLOSE_PLANIFICACION:\s*PLC=(\d+),\s*SM=(\d+),\s*CN_PLANTA=(\d+),\s*CENAS=(\d+),\s*SC=(\d+),\s*CONC=(\d+),\s*CN_EXT=(\d+),\s*CS_EXT=(\d+)\]/);
-                if (match) {
-                    plc = parseInt(match[1]);
-                    sm = parseInt(match[2]);
-                    cnPlanta = parseInt(match[3]);
-                    cenas = parseInt(match[4]);
-                    sc = parseInt(match[5]);
-                    conc = parseInt(match[6]);
-                    cnExt = parseInt(match[7]);
-                    csExt = parseInt(match[8]);
+                if (isCep) {
+                    const matchCep = obs.match(/\[DESGLOSE_PLANIFICACION_CEP:\s*SISTEMAS_CEP=(\d+),\s*SEG_PLC=(\d+),\s*SEG_RUICES=(\d+),\s*SEG_CENTRAL=(\d+)\]/);
+                    if (matchCep) {
+                        sistemasCep = parseInt(matchCep[1]);
+                        seguridadPlc = parseInt(matchCep[2]);
+                        seguridadRuices = parseInt(matchCep[3]);
+                        seguridadCentralCep = parseInt(matchCep[4]);
+                    } else {
+                        const f1 = obs.match(/SISTEMAS_CEP=(\d+)/);
+                        const f2 = obs.match(/SEG_PLC=(\d+)/);
+                        const f3 = obs.match(/SEG_RUICES=(\d+)/);
+                        const f4 = obs.match(/SEG_CENTRAL=(\d+)/);
+                        sistemasCep = f1 ? parseInt(f1[1]) : 0;
+                        seguridadPlc = f2 ? parseInt(f2[1]) : 0;
+                        seguridadRuices = f3 ? parseInt(f3[1]) : 0;
+                        seguridadCentralCep = f4 ? parseInt(f4[1]) : 0;
+                    }
                 } else {
-                    const fallbackPlc = obs.match(/PLC=(\d+)/);
-                    const fallbackSm = obs.match(/SM=(\d+)/);
-                    const fallbackCnPlanta = obs.match(/CN_PLANTA=(\d+)/);
-                    const fallbackCenas = obs.match(/CENAS=(\d+)/);
-                    const fallbackSc = obs.match(/SC=(\d+)/);
-                    const fallbackConc = obs.match(/CONC=(\d+)/);
-                    const fallbackCnExt = obs.match(/CN_EXT=(\d+)/);
-                    const fallbackCsExt = obs.match(/CS_EXT=(\d+)/);
-                    
-                    plc = fallbackPlc ? parseInt(fallbackPlc[1]) : 0;
-                    sm = fallbackSm ? parseInt(fallbackSm[1]) : 0;
-                    cnPlanta = fallbackCnPlanta ? parseInt(fallbackCnPlanta[1]) : 0;
-                    cenas = fallbackCenas ? parseInt(fallbackCenas[1]) : 0;
-                    sc = fallbackSc ? parseInt(fallbackSc[1]) : 0;
-                    conc = fallbackConc ? parseInt(fallbackConc[1]) : 0;
-                    cnExt = fallbackCnExt ? parseInt(fallbackCnExt[1]) : 0;
-                    csExt = fallbackCsExt ? parseInt(fallbackCsExt[1]) : 0;
+                    const match = obs.match(/\[DESGLOSE_PLANIFICACION:\s*PLC=(\d+),\s*SM=(\d+),\s*CN_PLANTA=(\d+),\s*CENAS=(\d+),\s*SC=(\d+),\s*CONC=(\d+),\s*CN_EXT=(\d+),\s*CS_EXT=(\d+)\]/);
+                    if (match) {
+                        plc = parseInt(match[1]);
+                        sm = parseInt(match[2]);
+                        cnPlanta = parseInt(match[3]);
+                        cenas = parseInt(match[4]);
+                        sc = parseInt(match[5]);
+                        conc = parseInt(match[6]);
+                        cnExt = parseInt(match[7]);
+                        csExt = parseInt(match[8]);
+                    } else {
+                        const fallbackPlc = obs.match(/PLC=(\d+)/);
+                        const fallbackSm = obs.match(/SM=(\d+)/);
+                        const fallbackCnPlanta = obs.match(/CN_PLANTA=(\d+)/);
+                        const fallbackCenas = obs.match(/CENAS=(\d+)/);
+                        const fallbackSc = obs.match(/SC=(\d+)/);
+                        const fallbackConc = obs.match(/CONC=(\d+)/);
+                        const fallbackCnExt = obs.match(/CN_EXT=(\d+)/);
+                        const fallbackCsExt = obs.match(/CS_EXT=(\d+)/);
+                        
+                        plc = fallbackPlc ? parseInt(fallbackPlc[1]) : 0;
+                        sm = fallbackSm ? parseInt(fallbackSm[1]) : 0;
+                        cnPlanta = fallbackCnPlanta ? parseInt(fallbackCnPlanta[1]) : 0;
+                        cenas = fallbackCenas ? parseInt(fallbackCenas[1]) : 0;
+                        sc = fallbackSc ? parseInt(fallbackSc[1]) : 0;
+                        conc = fallbackConc ? parseInt(fallbackConc[1]) : 0;
+                        cnExt = fallbackCnExt ? parseInt(fallbackCnExt[1]) : 0;
+                        csExt = fallbackCsExt ? parseInt(fallbackCsExt[1]) : 0;
+                    }
                 }
             }
 
@@ -899,7 +922,7 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                 title: title.trim() || 'Planificación Semanal',
                 responsible: 'Admin',
                 company: 'Planificación',
-                cost_center: classification,
+                cost_center: classification === 'Territorio Metropolitano' ? 'Metropolitano' : classification,
                 status: 'Abierto',
                 request_date: sortedRows[0].date ? new Date(sortedRows[0].date).toISOString() : new Date().toISOString(),
                 status_date: new Date().toISOString(),
@@ -915,6 +938,13 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                             attendees: totalAttendees,
                             additional_requirements: '',
                             observations: obsMeta,
+                            service_category_id: 3,
+                            structured_data: {
+                                sistemasCep: row.sistemasCep,
+                                segPlc: row.seguridadPlc,
+                                segRuices: row.seguridadRuices,
+                                segCentral: row.seguridadCentralCep
+                            },
                             estimated_amount: 0,
                             selected_items: []
                         };
@@ -930,6 +960,17 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                             attendees: totalAttendees,
                             additional_requirements: '',
                             observations: obsMeta,
+                            service_category_id: 4,
+                            structured_data: {
+                                plc: row.plc,
+                                sm: row.sm,
+                                cnPlanta: row.colNortePlanta,
+                                cenas: row.cenas,
+                                sc: row.sobreCenas,
+                                conc: row.concentrados,
+                                cnExt: row.colNorteExt,
+                                csExt: row.colSurExt
+                            },
                             estimated_amount: 0,
                             selected_items: []
                         };

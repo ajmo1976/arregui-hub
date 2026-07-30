@@ -175,7 +175,7 @@ function WeeklyReportView({ logs, onClose, formatPrice }: WeeklyReportViewProps)
 
                     if (d.structured_data && Object.keys(d.structured_data).length > 0) {
                         const sd = d.structured_data;
-                        if (d.service_category_id === 4 || (ev.cost_center === 'Metropolitano')) {
+                        if (d.service_category_id === 4 || (ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano')) {
                             plc = parseInt(sd.plc) || 0;
                             sm = parseInt(sd.sm) || 0;
                             cnPlanta = parseInt(sd.cnPlanta) || 0;
@@ -876,7 +876,7 @@ export default function DailyRecordsView() {
         const detailsMap = new Map<string, any>();
         planningEvents.forEach((ev: any) => {
             if (!ev.details) return;
-            const isMetropolitano = ev.cost_center === 'Metropolitano';
+            const isMetropolitano = ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano';
             const isCep = ev.cost_center === 'CEP';
             const isEspecial = ev.cost_center === 'Servicios Especiales' || ev.cost_center === 'Quintas' || (ev.title && (ev.title.includes('Quintas') || ev.title.includes('Especiales')));
             
@@ -888,7 +888,7 @@ export default function DailyRecordsView() {
                 const p = detailsMap.get(date);
                 const obs = d.observations || '';
                 
-                const isMetropolitano = ev.cost_center === 'Metropolitano';
+                const isMetropolitano = ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano';
                 const isCep = ev.cost_center === 'CEP';
                 const isEspecial = ev.cost_center === 'Servicios Especiales' || ev.cost_center === 'Quintas' || (ev.title && (ev.title.includes('Quintas') || ev.title.includes('Especiales')));
 
@@ -1340,7 +1340,7 @@ export default function DailyRecordsView() {
                                                 const ccFilter = typeMap[activeListTab];
                                                 const evs = planningEvents.filter((ev: any) => {
                                                     if (activeListTab === 'metropolitano') {
-                                                        return ev.cost_center === 'Metropolitano' || (ev.title && ev.title.includes('Metropolitano')) || (ev.details && ev.details.some((d: any) => d.service_category_id === 4 || d.service_category_id === 1 || (d.observations && (d.observations.includes('DESGLOSE_PLANIFICACION:') || (d.observations.includes('PLC=') && !d.observations.includes('SEG_PLC='))))));
+                                                        return ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano' || (ev.title && ev.title.includes('Metropolitano')) || (ev.details && ev.details.some((d: any) => d.service_category_id === 4 || d.service_category_id === 1 || (d.observations && (d.observations.includes('DESGLOSE_PLANIFICACION:') || (d.observations.includes('PLC=') && !d.observations.includes('SEG_PLC='))))));
                                                     }
                                                     if (activeListTab === 'cep') {
                                                         return ev.cost_center === 'CEP' || (ev.title && ev.title.includes('CEP')) || (ev.details && ev.details.some((d: any) => d.service_category_id === 3 || (d.observations && d.observations.includes('DESGLOSE_PLANIFICACION_CEP:'))));
