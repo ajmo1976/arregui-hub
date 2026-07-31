@@ -29,6 +29,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
+import { getConsolidatedData } from '../../utils/operationalMetrics';
 
 interface DashboardStats {
     inventory_value: number;
@@ -68,12 +69,86 @@ export default function Dashboard() {
     const fetchDashboardData = async (selectedRange = range, sDate = startDate, eDate = endDate) => {
         try {
             setLoading(true);
-            const res = await inventoryApi.getDashboardSummary(
-                selectedRange,
-                selectedRange === 'custom' ? sDate : undefined,
-                selectedRange === 'custom' ? eDate : undefined
-            );
-            setData(res.data);
+            const startParam = selectedRange === 'custom' ? sDate : undefined;
+            const endParam = selectedRange === 'custom' ? eDate : undefined;
+
+            const [summaryRes, logsRes, eventsRes, pricesRes] = await Promise.all([
+                inventoryApi.getDashboardSummary(selectedRange, startParam, endParam),
+                inventoryApi.getDailyLogs(undefined, undefined),
+                inventoryApi.getServiceEvents(),
+                inventoryApi.getMealPrices().catch(() => ({ data: [] }))
+            ]);
+            
+            const summary = summaryRes.data;
+            const logs = Array.isArray(logsRes.data) ? logsRes.data : [];
+            const events = Array.isArray(eventsRes.data) ? eventsRes.data.filter((ev: any) => ev.company === 'Planificación') : [];
+            const prices = Array.isArray(pricesRes.data) ? pricesRes.data : [];
+
+            let computedStart = startParam;
+            let computedEnd = endParam;
+            const today = new Date();
+            if (selectedRange === 'month') {
+                const y = today.getFullYear();
+                const m = today.getMonth();
+                const firstDay = new Date(y, m, 1);
+                const lastDay = new Date(y, m + 1, 0);
+                // Adjust for timezone offset to prevent date shifting
+                computedStart = new Date(firstDay.getTime() - (firstDay.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
+                computedEnd = new Date(lastDay.getTime() - (lastDay.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
+            } else if (selectedRange === 'day') {
+                computedStart = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
+                computedEnd = computedStart;
+            } else if (selectedRange === 'week') {
+                const first = today.getDate() - today.getDay() + 1;
+                const d1 = new Date(today.setDate(first));
+                computedStart = new Date(d1.getTime() - (d1.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
+                const d2 = new Date(today.setDate(first + 6));
+                computedEnd = new Date(d2.getTime() - (d2.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
+            }
+
+            const consolidated = getConsolidatedData(logs, events, prices, computedStart, computedEnd);
+
+            let realLunches = 0;
+            let realLunchRev = 0;
+            let realDelRev = 0;
+            let realBrkRev = 0;
+
+            consolidated.forEach(row => {
+                const diningRoomTotal = row.real.lunchSold || row.plan.plc;
+                realLunches += diningRoomTotal + row.plan.sm + row.plan.cnPlanta + row.plan.cenas + row.plan.sc + row.plan.conc + row.plan.cnExt + row.plan.csExt;
+                realLunchRev += row.billingComedor;
+                realDelRev += row.billingMetroDelivery + row.billingQuintas + row.billingCep;
+                realBrkRev += row.real.breakfastRevenue || 0;
+            });
+
+            summary.lunches = realLunches;
+            summary.lunch_revenue = realLunchRev;
+            summary.delivery_revenue = realDelRev;
+            summary.breakfast_revenue = realBrkRev;
+            summary.total_revenue = realLunchRev + realDelRev + realBrkRev + summary.services_revenue;
+
+            if (summary.chart_data) {
+                summary.chart_data.forEach((day: any) => {
+                    const monthDay = day.date.split('/').reverse().join('-');
+                    const dayMatch = consolidated.find(r => r.date.endsWith('-' + monthDay));
+                    if (dayMatch) {
+                        const diningRoomTotal = dayMatch.real.lunchSold || dayMatch.plan.plc;
+                        day.lunches = diningRoomTotal + dayMatch.plan.sm + dayMatch.plan.cnPlanta + dayMatch.plan.cenas + dayMatch.plan.sc + dayMatch.plan.conc + dayMatch.plan.cnExt + dayMatch.plan.csExt;
+                        day.income_lunch = dayMatch.billingComedor;
+                        day.income_del = dayMatch.billingMetroDelivery + dayMatch.billingQuintas + dayMatch.billingCep;
+                        day.income_brk = dayMatch.real.breakfastRevenue || 0;
+                        day.income = day.income_lunch + day.income_del + day.income_brk + day.income_srv;
+                    } else {
+                        day.lunches = 0;
+                        day.income_lunch = 0;
+                        day.income_del = 0;
+                        day.income_brk = 0;
+                        day.income = day.income_srv;
+                    }
+                });
+            }
+
+            setData(summary);
         } catch (err) {
             toast.error('Error al cargar datos del dashboard');
         } finally {
