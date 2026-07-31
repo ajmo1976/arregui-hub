@@ -232,7 +232,14 @@ export default function MultiTypeRecordForm({ onClose, onSuccess, initialType, i
                         delivery_dinner: 0,
                         delivery_night: 0,
                         delivery_revenue: 0,
-                        category_id: 1, // ALMUERZO COMEDOR — campo correcto del modelo DailyLog
+                        service_category_id: 1, // ALMUERZO COMEDOR
+                        structured_data: {
+                            t1: parseInt(row.t1) || 0,
+                            t2: parseInt(row.t2) || 0,
+                            t3: parseInt(row.t3) || 0,
+                            t4: parseInt(row.t4) || 0,
+                            manual: parseInt(row.manual) || 0
+                        },
                         observations: `[DESGLOSE_ALMUERZOS: T1=${parseInt(row.t1) || 0}, T2=${parseInt(row.t2) || 0}, T3=${parseInt(row.t3) || 0}, T4=${parseInt(row.t4) || 0}, M=${parseInt(row.manual) || 0}]`
                     };
                     if (row.eventId) {
