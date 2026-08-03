@@ -150,7 +150,7 @@ export const inventoryApi = {
     deleteRole: (id: number) => api.delete(`/users/roles/${id}`),
 
     // Services
-    getServiceEvents: () => api.get('/services/events'),
+    getServiceEvents: (limit?: number) => api.get('/services/events', { params: limit ? { limit } : undefined }),
     createServiceEvent: (data: any) => api.post('/services/events', data),
     getServiceEvent: (id: number) => api.get(`/services/events/${id}`),
     updateServiceEvent: (id: number, data: any) => api.patch(`/services/events/${id}`, data),
@@ -181,10 +181,11 @@ export const inventoryApi = {
     getAuditLogDetail: (id: number) => api.get(`/system/logs/${id}`),
 
     // Operational Records (Registros Diarios)
-    getDailyLogs: (query?: string, category_id?: number) => {
+    getDailyLogs: (query?: string, category_id?: number, limit?: number) => {
         const params = new URLSearchParams();
         if (query) params.append('query', query);
         if (category_id !== undefined && category_id !== null) params.append('category_id', category_id.toString());
+        if (limit) params.append('limit', limit.toString());
         const queryString = params.toString();
         return api.get(`/operational${queryString ? `?${queryString}` : ''}`);
     },

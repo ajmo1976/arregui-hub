@@ -76,8 +76,8 @@ export default function Dashboard() {
 
             const [summaryRes, logsRes, eventsRes, pricesRes] = await Promise.all([
                 inventoryApi.getDashboardSummary(selectedRange, startParam, endParam),
-                inventoryApi.getDailyLogs(undefined, undefined),
-                inventoryApi.getServiceEvents(),
+                inventoryApi.getDailyLogs(undefined, undefined, 1000),
+                inventoryApi.getServiceEvents(1000),
                 inventoryApi.getMealPrices().catch(() => ({ data: [] }))
             ]);
             
@@ -106,6 +106,19 @@ export default function Dashboard() {
                 computedStart = new Date(d1.getTime() - (d1.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
                 const d2 = new Date(today.setDate(first + 6));
                 computedEnd = new Date(d2.getTime() - (d2.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
+            } else if (selectedRange === 'last_month') {
+                const y = today.getFullYear();
+                const m = today.getMonth();
+                const firstDay = new Date(y, m - 1, 1);
+                const lastDay = new Date(y, m, 0);
+                computedStart = new Date(firstDay.getTime() - (firstDay.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
+                computedEnd = new Date(lastDay.getTime() - (lastDay.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
+            } else if (selectedRange === 'year') {
+                const y = today.getFullYear();
+                const firstDay = new Date(y, 0, 1);
+                const lastDay = new Date(y, 11, 31);
+                computedStart = new Date(firstDay.getTime() - (firstDay.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
+                computedEnd = new Date(lastDay.getTime() - (lastDay.getTimezoneOffset() * 60000)).toISOString().substring(0, 10);
             }
 
             const consolidated = getConsolidatedData(logs, events, prices, computedStart, computedEnd);
