@@ -39,6 +39,7 @@ interface DashboardStats {
     services_revenue: number;
     total_revenue: number;
     lunches: number;
+    delivery_lunches?: number;
     services_count: number;
     users_count: number;
     clients_count: number;
