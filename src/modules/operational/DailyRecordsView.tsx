@@ -359,8 +359,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
         };
 
         const totalCep = plan.sistemasCep + plan.seguridadPlc + plan.seguridadRuices + plan.seguridadCentralCep;
-        const totalMetroDelivery = plan.sm + plan.cnPlanta + plan.cenas + plan.sc + plan.conc + plan.cnExt + plan.csExt;
-        const totalMetro = plan.plc + totalMetroDelivery;
+        const totalMetro = plan.plc + plan.sm + plan.cnPlanta + plan.cenas + plan.sc + plan.conc + plan.cnExt + plan.csExt;
 
         // Comedor billing (if log exists, lunchSold * almuerzo_comedor; if not, plan.plc * plc)
         const comedorCount = log ? real.lunchSold : plan.plc;
@@ -397,10 +396,10 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
             ((quintasData.quintas?.cenas || 0) * getPriceForDate(prices, date, 'cenas_quintas')) +
             ((quintasData.pilotos?.almuerzos || 0) * getPriceForDate(prices, date, 'almuerzos_pilotos'));
 
-        const diningRoomTotal = comedorCount;
-        const totalGral = diningRoomTotal + plan.sm + plan.cnPlanta + plan.cenas + plan.sc + plan.conc + plan.cnExt + plan.csExt + plan.sistemasCep + plan.seguridadPlc + plan.seguridadRuices + plan.seguridadCentralCep + plan.quintas;
+        const diningRoomTotal = log ? real.lunchSold : 0;
+        const totalGral = totalCep + totalMetro + plan.quintas + diningRoomTotal;
 
-        const billing = billingComedor + billingCep + billingMetroDelivery + billingQuintas;
+        const billing = billingComedorReal + billingCep + billingMetroTotal + billingQuintas;
         const mealPrice = getPriceForDate(prices, date, 'almuerzo_comedor');
 
         return {
@@ -409,7 +408,6 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
             real,
             totalCep,
             totalMetro,
-            totalMetroDelivery,
             totalQuintas: plan.quintas,
             especialesData: especialesDataForDate,
             totalGral,
@@ -652,7 +650,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
                                 )}
                                 {showMetroTotal && (
                                     <th className="px-3 py-3 text-center bg-blue-50/20 dark:bg-blue-955/10 border-r border-gray-100 dark:border-gray-800 text-blue-700 dark:text-blue-300 font-black" rowSpan={isResumen ? 1 : 2}>
-                                        {isResumen ? 'Delivery Metro' : 'Total Metro'}
+                                        Total Metro
                                     </th>
                                 )}
                                 {showQuintasTotal && (
@@ -795,7 +793,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
                                             {/* Total Metropolitano */}
                                             {showMetroTotal && (
                                                 <td className="px-2 py-4 text-center bg-blue-50/15 dark:bg-blue-955/10 border-r border-gray-100 dark:border-gray-800 text-blue-700 dark:text-blue-400 font-black">
-                                                    {row.hasPlan && (isResumen ? row.totalMetroDelivery > 0 : row.totalMetro > 0) ? (isResumen ? row.totalMetroDelivery : row.totalMetro) : '-'}
+                                                    {row.hasPlan && row.totalMetro > 0 ? row.totalMetro : '-'}
                                                 </td>
                                             )}
                                             {/* Total Quintas */}
