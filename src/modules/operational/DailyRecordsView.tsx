@@ -359,7 +359,8 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
         };
 
         const totalCep = plan.sistemasCep + plan.seguridadPlc + plan.seguridadRuices + plan.seguridadCentralCep;
-        const totalMetro = plan.plc + plan.sm + plan.cnPlanta + plan.cenas + plan.sc + plan.conc + plan.cnExt + plan.csExt;
+        const totalMetroDelivery = plan.sm + plan.cnPlanta + plan.cenas + plan.sc + plan.conc + plan.cnExt + plan.csExt;
+        const totalMetro = plan.plc + totalMetroDelivery;
 
         // Comedor billing (if log exists, lunchSold * almuerzo_comedor; if not, plan.plc * plc)
         const comedorCount = log ? real.lunchSold : plan.plc;
@@ -408,6 +409,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
             real,
             totalCep,
             totalMetro,
+            totalMetroDelivery,
             totalQuintas: plan.quintas,
             especialesData: especialesDataForDate,
             totalGral,
@@ -437,10 +439,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
     // KPIs
     const totalServings = consolidatedData.reduce((acc, row) => {
         if (activeTab === 'resumen') return acc + row.totalGral;
-        if (activeTab === 'metropolitano') {
-            const diningRoomTotal = row.real.lunchSold || row.plan.plc;
-            return acc + diningRoomTotal + row.plan.sm + row.plan.cnPlanta + row.plan.cenas + row.plan.sc + row.plan.conc + row.plan.cnExt + row.plan.csExt;
-        }
+        if (activeTab === 'metropolitano') return acc + row.totalMetro;
         if (activeTab === 'cep') return acc + row.totalCep;
         if (activeTab === 'registros') return acc + (row.real.lunchSold || 0);
         if (activeTab === 'quintas') return acc + row.totalQuintas;
@@ -653,7 +652,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
                                 )}
                                 {showMetroTotal && (
                                     <th className="px-3 py-3 text-center bg-blue-50/20 dark:bg-blue-955/10 border-r border-gray-100 dark:border-gray-800 text-blue-700 dark:text-blue-300 font-black" rowSpan={isResumen ? 1 : 2}>
-                                        Total Metro
+                                        {isResumen ? 'Delivery Metro' : 'Total Metro'}
                                     </th>
                                 )}
                                 {showQuintasTotal && (
@@ -796,7 +795,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
                                             {/* Total Metropolitano */}
                                             {showMetroTotal && (
                                                 <td className="px-2 py-4 text-center bg-blue-50/15 dark:bg-blue-955/10 border-r border-gray-100 dark:border-gray-800 text-blue-700 dark:text-blue-400 font-black">
-                                                    {row.hasPlan && row.totalMetro > 0 ? row.totalMetro : '-'}
+                                                    {row.hasPlan && (isResumen ? row.totalMetroDelivery > 0 : row.totalMetro > 0) ? (isResumen ? row.totalMetroDelivery : row.totalMetro) : '-'}
                                                 </td>
                                             )}
                                             {/* Total Quintas */}
