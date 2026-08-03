@@ -365,6 +365,8 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
         const comedorCount = log ? real.lunchSold : plan.plc;
         const comedorConcept = log ? 'almuerzo_comedor' : 'plc';
         const billingComedor = comedorCount * getPriceForDate(prices, date, comedorConcept);
+        const billingComedorReal = log ? (real.lunchSold * getPriceForDate(prices, date, 'almuerzo_comedor')) : 0;
+
 
         // CEP billing
         const billingCep = 
@@ -412,6 +414,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
             mealPrice,
             billing,
             billingComedor,
+            billingComedorReal,
             billingCep,
             billingMetro: billingMetroTotal,
             billingQuintas,
@@ -439,7 +442,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
             return acc + diningRoomTotal + row.plan.sm + row.plan.cnPlanta + row.plan.cenas + row.plan.sc + row.plan.conc + row.plan.cnExt + row.plan.csExt;
         }
         if (activeTab === 'cep') return acc + row.totalCep;
-        if (activeTab === 'registros') return acc + (row.real.lunchSold || row.plan.plc);
+        if (activeTab === 'registros') return acc + (row.real.lunchSold || 0);
         if (activeTab === 'quintas') return acc + row.totalQuintas;
         return acc;
     }, 0);
@@ -448,7 +451,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
         if (activeTab === 'resumen') return acc + row.billing;
         if (activeTab === 'metropolitano') return acc + row.billingMetro;
         if (activeTab === 'cep') return acc + row.billingCep;
-        if (activeTab === 'registros') return acc + row.billingComedor;
+        if (activeTab === 'registros') return acc + row.billingComedorReal;
         if (activeTab === 'quintas') return acc + row.billingQuintas;
         return acc;
     }, 0);
@@ -644,7 +647,7 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
                                     </th>
                                 )}
                                 {showMetroDetails && (
-                                    <th className="px-3 py-3 text-center bg-blue-50/10 dark:bg-blue-955/5 text-blue-600 dark:text-blue-400" colSpan={8}>
+                                    <th className="px-3 py-3 text-center bg-blue-50/10 dark:bg-blue-955/5 text-blue-600 dark:text-blue-400" colSpan={7}>
                                         Planificación Metropolitana
                                     </th>
                                 )}
@@ -706,7 +709,6 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
                                             <th className="px-2 py-3 text-center bg-blue-50/5 dark:bg-blue-955/5">SM (Sobre Cenas)</th>
                                             <th className="px-2 py-3 text-center bg-blue-50/5 dark:bg-blue-955/5">ColNorte</th>
                                             <th className="px-2 py-3 text-center bg-blue-50/5 dark:bg-blue-955/5">Concentrados</th>
-                                            <th className="px-2 py-3 text-center bg-blue-50/5 dark:bg-blue-955/5">Col Norte (Ext)</th>
                                             <th className="px-2 py-3 text-center bg-blue-50/5 dark:bg-blue-955/5">ColSur</th>
                                         </>
                                     )}
@@ -785,9 +787,6 @@ function WeeklyReportView({ logs, planningEvents, prices, onClose, formatPrice }
                                                     </td>
                                                     <td className="px-2 py-4 text-center text-gray-600 dark:text-gray-400 bg-blue-50/5 dark:bg-blue-955/5">
                                                         {row.hasPlan && row.plan.conc > 0 ? row.plan.conc : '-'}
-                                                    </td>
-                                                    <td className="px-2 py-4 text-center text-gray-600 dark:text-gray-400 bg-blue-50/5 dark:bg-blue-955/5">
-                                                        {row.hasPlan && row.plan.cnExt > 0 ? row.plan.cnExt : '-'}
                                                     </td>
                                                     <td className="px-2 py-4 text-center text-gray-600 dark:text-gray-400 bg-blue-50/5 dark:bg-blue-955/5">
                                                         {row.hasPlan && row.plan.csExt > 0 ? row.plan.csExt : '-'}
