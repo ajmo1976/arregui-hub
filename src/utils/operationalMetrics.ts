@@ -59,24 +59,57 @@ export const getPlanningDetails = (planningEvents: any[]) => {
         (ev.details || []).forEach((d: any) => {
             let plc = 0, sm = 0, cnPlanta = 0, cenas = 0, sc = 0, conc = 0, cnExt = 0, csExt = 0;
             let sistemasCep = 0, seguridadPlc = 0, seguridadRuices = 0, seguridadCentralCep = 0;
-            let totalEspeciales = 0;
             let especialesData = null;
+            let totalEspeciales = 0;
 
-            const isCep = ev.client_id === 2 || ev.category_id === 3;
-            const isEspecial = ev.category_id === 2;
+            const isMetropolitano = ev.cost_center === 'Metropolitano' || ev.cost_center === 'Territorio Metropolitano';
+            const isCep = ev.cost_center === 'CEP';
+            const isEspecial = ev.cost_center === 'Servicios Especiales' || ev.cost_center === 'Quintas' || (ev.title && (ev.title.includes('Quintas') || ev.title.includes('Especiales')));
 
-            if (d.observations) {
-                const obs = typeof d.observations === 'string' ? d.observations : JSON.stringify(d.observations);
-                
+            let sd = d.structured_data;
+            if (typeof sd === 'string') {
+                try { sd = JSON.parse(sd); } catch (e) { sd = {}; }
+            }
+
+            if (sd && Object.keys(sd).length > 0) {
+                if (d.service_category_id === 4 || isMetropolitano) {
+                    plc = parseInt(sd.plc) || 0;
+                    sm = parseInt(sd.sm) || 0;
+                    cnPlanta = parseInt(sd.cnPlanta || sd.colNortePlanta) || 0;
+                    cenas = parseInt(sd.cenas) || 0;
+                    sc = parseInt(sd.sc || sd.sobreCenas) || 0;
+                    conc = parseInt(sd.conc || sd.concentrados) || 0;
+                    cnExt = parseInt(sd.cnExt || sd.colNorteExt) || 0;
+                    csExt = parseInt(sd.csExt || sd.colSurExt) || 0;
+                } else if (d.service_category_id === 3 || isCep) {
+                    sistemasCep = parseInt(sd.sistemasCep) || 0;
+                    seguridadPlc = parseInt(sd.segPlc) || 0;
+                    seguridadRuices = parseInt(sd.segRuices) || 0;
+                    seguridadCentralCep = parseInt(sd.segCentral) || 0;
+                } else if (d.service_category_id === 2 || isEspecial) {
+                    especialesData = sd;
+                    totalEspeciales = (parseInt(sd.choferes?.cenas)||0) + (parseInt(sd.quintas?.cenas)||0) + (parseInt(sd.pilotos?.almuerzos)||0);
+                }
+            } else {
+                const obs = d.observations || '';
                 if (isCep) {
-                    const match = obs.match(/\[DESGLOSE_PLANIFICACION_CEP:\s*SISTEMAS_CEP=(\d+),\s*SEG_PLC=(\d+),\s*SEG_RUICES=(\d+),\s*SEG_CENTRAL=(\d+)\]/);
-                    if (match) {
-                        sistemasCep = parseInt(match[1]);
-                        seguridadPlc = parseInt(match[2]);
-                        seguridadRuices = parseInt(match[3]);
-                        seguridadCentralCep = parseInt(match[4]);
+                    const matchCep = obs.match(/\[DESGLOSE_PLANIFICACION_CEP:\s*SISTEMAS_CEP=(\d+),\s*SEG_PLC=(\d+),\s*SEG_RUICES=(\d+),\s*SEG_CENTRAL=(\d+)\]/);
+                    if (matchCep) {
+                        sistemasCep = parseInt(matchCep[1]);
+                        seguridadPlc = parseInt(matchCep[2]);
+                        seguridadRuices = parseInt(matchCep[3]);
+                        seguridadCentralCep = parseInt(matchCep[4]);
+                    } else {
+                        const f1 = obs.match(/SISTEMAS_CEP=(\d+)/);
+                        const f2 = obs.match(/SEG_PLC=(\d+)/);
+                        const f3 = obs.match(/SEG_RUICES=(\d+)/);
+                        const f4 = obs.match(/SEG_CENTRAL=(\d+)/);
+                        sistemasCep = f1 ? parseInt(f1[1]) : 0;
+                        seguridadPlc = f2 ? parseInt(f2[1]) : 0;
+                        seguridadRuices = f3 ? parseInt(f3[1]) : 0;
+                        seguridadCentralCep = f4 ? parseInt(f4[1]) : 0;
                     }
-                } else if (!isEspecial) {
+                } else if (isMetropolitano) {
                     const match = obs.match(/\[DESGLOSE_PLANIFICACION:\s*PLC=(\d+),\s*SM=(\d+),\s*CN_PLANTA=(\d+),\s*CENAS=(\d+),\s*SC=(\d+),\s*CONC=(\d+),\s*CN_EXT=(\d+),\s*CS_EXT=(\d+)\]/);
                     if (match) {
                         plc = parseInt(match[1]);
@@ -88,14 +121,23 @@ export const getPlanningDetails = (planningEvents: any[]) => {
                         cnExt = parseInt(match[7]);
                         csExt = parseInt(match[8]);
                     } else {
-                        plc = parseInt(obs.match(/PLC=(\d+)/)?.[1] || '0');
-                        sm = parseInt(obs.match(/SM=(\d+)/)?.[1] || '0');
-                        cnPlanta = parseInt(obs.match(/CN_PLANTA=(\d+)/)?.[1] || '0');
-                        cenas = parseInt(obs.match(/CENAS=(\d+)/)?.[1] || '0');
-                        sc = parseInt(obs.match(/SC=(\d+)/)?.[1] || '0');
-                        conc = parseInt(obs.match(/CONC=(\d+)/)?.[1] || '0');
-                        cnExt = parseInt(obs.match(/CN_EXT=(\d+)/)?.[1] || '0');
-                        csExt = parseInt(obs.match(/CS_EXT=(\d+)/)?.[1] || '0');
+                        const fallbackPlc = obs.match(/PLC=(\d+)/);
+                        const fallbackSm = obs.match(/SM=(\d+)/);
+                        const fallbackCnPlanta = obs.match(/CN_PLANTA=(\d+)/);
+                        const fallbackCenas = obs.match(/CENAS=(\d+)/);
+                        const fallbackSc = obs.match(/SC=(\d+)/);
+                        const fallbackConc = obs.match(/CONC=(\d+)/);
+                        const fallbackCnExt = obs.match(/CN_EXT=(\d+)/);
+                        const fallbackCsExt = obs.match(/CS_EXT=(\d+)/);
+                        
+                        plc = fallbackPlc ? parseInt(fallbackPlc[1]) : 0;
+                        sm = fallbackSm ? parseInt(fallbackSm[1]) : 0;
+                        cnPlanta = fallbackCnPlanta ? parseInt(fallbackCnPlanta[1]) : 0;
+                        cenas = fallbackCenas ? parseInt(fallbackCenas[1]) : 0;
+                        sc = fallbackSc ? parseInt(fallbackSc[1]) : 0;
+                        conc = fallbackConc ? parseInt(fallbackConc[1]) : 0;
+                        cnExt = fallbackCnExt ? parseInt(fallbackCnExt[1]) : 0;
+                        csExt = fallbackCsExt ? parseInt(fallbackCsExt[1]) : 0;
                     }
                 } else if (isEspecial) {
                     const matchEspeciales = obs.match(/\[JSON_ESPECIALES:(.*)\]/) || obs.match(/\[JSON_QUINTAS:(.*)\]/);
@@ -104,7 +146,9 @@ export const getPlanningDetails = (planningEvents: any[]) => {
                             const data = JSON.parse(matchEspeciales[1]);
                             especialesData = data;
                             totalEspeciales = (parseInt(data.choferes?.cenas)||0) + (parseInt(data.quintas?.cenas)||0) + (parseInt(data.pilotos?.almuerzos)||0);
-                        } catch (e) {}
+                        } catch (e) {
+                            console.error('Error parsing Especiales JSON', e);
+                        }
                     }
                 }
             }
