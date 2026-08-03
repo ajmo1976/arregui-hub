@@ -194,7 +194,7 @@ export default function Dashboard() {
 
     const mainStats = [
         {
-            title: 'Ingresos Comedor (Presencial)',
+            title: 'Facturación de Almuerzos en Comedor',
             value: formatPrice(data?.lunch_revenue || 0),
             trend: data?.trends.lunches || '+0%',
             icon: Utensils,
@@ -203,7 +203,7 @@ export default function Dashboard() {
             dataKey: 'income_lunch'
         },
         {
-            title: 'Cantidad Total de Platos (Comedor + Delivery)',
+            title: 'Total de platos de Almuerzos en Comedor',
             value: (data?.lunches || 0).toString(),
             trend: data?.trends.lunches || '+0%',
             icon: Utensils,
