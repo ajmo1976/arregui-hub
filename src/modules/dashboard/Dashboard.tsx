@@ -12,7 +12,8 @@ import {
     ShoppingBag,
     Loader2,
     ChevronRight,
-    Coffee
+    Coffee,
+    DollarSign
 } from 'lucide-react';
 import {
     XAxis,
@@ -209,6 +210,16 @@ export default function Dashboard() {
     ].filter(item => item.value > 0);
 
     const mainStats = [
+        // Total Global
+        {
+            title: 'Facturación Total General',
+            value: formatPrice(data?.total_revenue || 0),
+            trend: data?.trends.revenue || '+0%',
+            icon: DollarSign,
+            color: 'text-primary',
+            bg: 'bg-primary/10',
+            dataKey: 'total_revenue'
+        },
         // Comedor
         {
             title: 'Facturación de Almuerzos en Comedor',
@@ -396,34 +407,10 @@ export default function Dashboard() {
                 )}
             </AnimatePresence>
 
-            {/* Fila 1: KPIs Financieros Agrupados (Only if authorized) */}
+            {/* Fila 1: KPIs Financieros en Cuadrícula Uniforme */}
             {canShowPrices && (
-                <div className="space-y-8">
-                    {/* Comedor Section */}
-                    <div>
-                        <h3 className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Comedor (Presencial)</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {mainStats.slice(0, 3).map((stat, idx) => renderStatCard(stat, idx))}
-                        </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Delivery Section */}
-                        <div>
-                            <h3 className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Delivery</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-                                {mainStats.slice(3, 5).map((stat, idx) => renderStatCard(stat, idx + 3))}
-                            </div>
-                        </div>
-                        
-                        {/* Catering Section */}
-                        <div>
-                            <h3 className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Servicios (Catering)</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-                                {mainStats.slice(5, 7).map((stat, idx) => renderStatCard(stat, idx + 5))}
-                            </div>
-                        </div>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    {mainStats.map((stat, idx) => renderStatCard(stat, idx))}
                 </div>
             )}
 
