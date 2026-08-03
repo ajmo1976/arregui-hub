@@ -110,19 +110,29 @@ export default function Dashboard() {
 
             let realLunches = 0;
             let realLunchRev = 0;
+            let realDelLunches = 0;
             let realDelRev = 0;
             let realBrkRev = 0;
 
             consolidated.forEach(row => {
-                const diningRoomTotal = row.real.lunchSold || row.plan.plc;
-                realLunches += diningRoomTotal + row.plan.sm + row.plan.cnPlanta + row.plan.cenas + row.plan.sc + row.plan.conc + row.plan.cnExt + row.plan.csExt;
-                realLunchRev += row.billingComedor;
-                realDelRev += row.billingMetroDelivery + row.billingQuintas + row.billingCep;
+                const hasLog = logs.some((l: any) => l.log_date.substring(0, 10) === row.date);
+                realLunches += row.real.lunchSold || 0;
+                
+                // For Dashboard, if no log exists, lunch revenue is 0
+                realLunchRev += hasLog ? row.billingComedor : 0;
+                
+                const totalMetro = row.plan.plc + row.plan.sm + row.plan.cnPlanta + row.plan.cenas + row.plan.sc + row.plan.conc + row.plan.cnExt + row.plan.csExt;
+                const totalCep = row.plan.sistemasCep + row.plan.seguridadPlc + row.plan.seguridadRuices + row.plan.seguridadCentralCep;
+                const totalQuintas = row.plan.quintas;
+                
+                realDelLunches += totalMetro + totalCep + totalQuintas;
+                realDelRev += row.billingMetroTotal + row.billingQuintas + row.billingCep;
                 realBrkRev += row.real.breakfastRevenue || 0;
             });
 
             summary.lunches = realLunches;
             summary.lunch_revenue = realLunchRev;
+            summary.delivery_lunches = realDelLunches;
             summary.delivery_revenue = realDelRev;
             summary.breakfast_revenue = realBrkRev;
             summary.total_revenue = realLunchRev + realDelRev + realBrkRev + summary.services_revenue;
@@ -132,14 +142,19 @@ export default function Dashboard() {
                     const monthDay = day.date.split('/').reverse().join('-');
                     const dayMatch = consolidated.find(r => r.date.endsWith('-' + monthDay));
                     if (dayMatch) {
-                        const diningRoomTotal = dayMatch.real.lunchSold || dayMatch.plan.plc;
-                        day.lunches = diningRoomTotal + dayMatch.plan.sm + dayMatch.plan.cnPlanta + dayMatch.plan.cenas + dayMatch.plan.sc + dayMatch.plan.conc + dayMatch.plan.cnExt + dayMatch.plan.csExt;
-                        day.income_lunch = dayMatch.billingComedor;
-                        day.income_del = dayMatch.billingMetroDelivery + dayMatch.billingQuintas + dayMatch.billingCep;
+                        const hasLog = logs.some((l: any) => l.log_date.substring(0, 10) === dayMatch.date);
+                        day.lunches = dayMatch.real.lunchSold || 0;
+                        const totalMetro = dayMatch.plan.plc + dayMatch.plan.sm + dayMatch.plan.cnPlanta + dayMatch.plan.cenas + dayMatch.plan.sc + dayMatch.plan.conc + dayMatch.plan.cnExt + dayMatch.plan.csExt;
+                        const totalCep = dayMatch.plan.sistemasCep + dayMatch.plan.seguridadPlc + dayMatch.plan.seguridadRuices + dayMatch.plan.seguridadCentralCep;
+                        day.delivery_lunches = totalMetro + totalCep + dayMatch.plan.quintas;
+                        
+                        day.income_lunch = hasLog ? dayMatch.billingComedor : 0;
+                        day.income_del = dayMatch.billingMetroTotal + dayMatch.billingQuintas + dayMatch.billingCep;
                         day.income_brk = dayMatch.real.breakfastRevenue || 0;
                         day.income = day.income_lunch + day.income_del + day.income_brk + day.income_srv;
                     } else {
                         day.lunches = 0;
+                        day.delivery_lunches = 0;
                         day.income_lunch = 0;
                         day.income_del = 0;
                         day.income_brk = 0;
@@ -193,6 +208,7 @@ export default function Dashboard() {
     ].filter(item => item.value > 0);
 
     const mainStats = [
+        // Comedor
         {
             title: 'Facturación de Almuerzos en Comedor',
             value: formatPrice(data?.lunch_revenue || 0),
@@ -212,7 +228,17 @@ export default function Dashboard() {
             dataKey: 'qty_lunch'
         },
         {
-            title: 'Facturación Total Delivery (Planificación + Comedor Del.)',
+            title: 'Facturación Desayunos (Comedor)',
+            value: formatPrice(data?.breakfast_revenue || 0),
+            trend: data?.trends.revenue || '+0%',
+            icon: Coffee,
+            color: 'text-amber-500',
+            bg: 'bg-amber-50',
+            dataKey: 'income_brk'
+        },
+        // Delivery
+        {
+            title: 'Facturación de Delivery (Metro, CEP y Servicios Especiales)',
             value: formatPrice(data?.delivery_revenue || 0),
             trend: data?.trends.revenue || '+0%',
             icon: Truck,
@@ -220,6 +246,16 @@ export default function Dashboard() {
             bg: 'bg-blue-50',
             dataKey: 'income_del'
         },
+        {
+            title: 'Cantidad de platos de Delivery (Metro, CEP y Servicios Especiales)',
+            value: (data?.delivery_lunches || 0).toString(),
+            trend: data?.trends.lunches || '+0%',
+            icon: Truck,
+            color: 'text-blue-500',
+            bg: 'bg-blue-50',
+            dataKey: 'qty_del'
+        },
+        // Catering
         {
             title: 'Facturación Servicios (Catering)',
             value: formatPrice(data?.services_revenue || 0),
@@ -237,17 +273,42 @@ export default function Dashboard() {
             color: 'text-indigo-500',
             bg: 'bg-indigo-50',
             dataKey: 'qty_srv'
-        },
-        {
-            title: 'Facturación Desayunos (Comedor)',
-            value: formatPrice(data?.breakfast_revenue || 0),
-            trend: data?.trends.revenue || '+0%',
-            icon: Coffee,
-            color: 'text-amber-500',
-            bg: 'bg-amber-50',
-            dataKey: 'income_brk'
-        },
+        }
     ];
+
+    const renderStatCard = (stat: any, idx: number) => (
+        <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.1 }}
+            className="group bg-white dark:bg-gray-800 p-6 rounded-[1.5rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col gap-5 overflow-hidden"
+        >
+            <div className="flex items-center justify-between">
+                <h4 className="text-[14px] font-bold text-gray-700 dark:text-gray-300 pr-2">{stat.title}</h4>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 shadow-sm shrink-0">
+                    <stat.icon size={14} className={stat.color} />
+                    <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 capitalize">
+                        {range === 'custom' ? 'Personal' : rangeOptions.find(o => o.value === range)?.label?.replace(' Pasado', '')}
+                    </span>
+                </div>
+            </div>
+            
+            <div className="flex items-baseline gap-2.5">
+                <h3 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">{stat.value}</h3>
+            </div>
+
+            <div className="h-px w-full bg-gray-100 dark:bg-gray-700/50" />
+
+            <div className="flex items-center gap-1.5">
+                <span className={`flex items-center gap-1 text-sm font-bold ${stat.trend.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {stat.trend.startsWith('+') ? <TrendingUp size={16} strokeWidth={2.5} /> : <TrendingDown size={16} strokeWidth={2.5} />}
+                    {stat.trend}
+                </span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{getComparisonLabel()}</span>
+            </div>
+        </motion.div>
+    );
 
     const rangeOptions = [
         { label: 'Día', value: 'day' },
@@ -334,42 +395,34 @@ export default function Dashboard() {
                 )}
             </AnimatePresence>
 
-            {/* Fila 1: KPIs Financieros (Only if authorized) */}
+            {/* Fila 1: KPIs Financieros Agrupados (Only if authorized) */}
             {canShowPrices && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {mainStats.map((stat, idx) => (
-                        <motion.div
-                            key={idx}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                            className="group bg-white dark:bg-gray-800 p-6 rounded-[1.5rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col gap-5 overflow-hidden"
-                        >
-                            <div className="flex items-center justify-between">
-                                <h4 className="text-[15px] font-medium text-gray-500 dark:text-gray-400">{stat.title}</h4>
-                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm">
-                                    <stat.icon size={14} className={stat.color} />
-                                    <span className="text-[12px] font-bold text-gray-700 dark:text-gray-300 capitalize">
-                                        {range === 'custom' ? 'Personalizado' : rangeOptions.find(o => o.value === range)?.label}
-                                    </span>
-                                </div>
+                <div className="space-y-8">
+                    {/* Comedor Section */}
+                    <div>
+                        <h3 className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Comedor (Presencial)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {mainStats.slice(0, 3).map((stat, idx) => renderStatCard(stat, idx))}
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Delivery Section */}
+                        <div>
+                            <h3 className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Delivery</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                                {mainStats.slice(3, 5).map((stat, idx) => renderStatCard(stat, idx + 3))}
                             </div>
-                            
-                            <div className="flex items-baseline gap-2.5">
-                                <h3 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">{stat.value}</h3>
+                        </div>
+                        
+                        {/* Catering Section */}
+                        <div>
+                            <h3 className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-4 px-1">Servicios (Catering)</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                                {mainStats.slice(5, 7).map((stat, idx) => renderStatCard(stat, idx + 5))}
                             </div>
-
-                            <div className="h-px w-full bg-gray-100 dark:bg-gray-700/50" />
-
-                            <div className="flex items-center gap-1.5">
-                                <span className={`flex items-center gap-1 text-sm font-bold ${stat.trend.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                    {stat.trend.startsWith('+') ? <TrendingUp size={16} strokeWidth={2.5} /> : <TrendingDown size={16} strokeWidth={2.5} />}
-                                    {stat.trend}
-                                </span>
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{getComparisonLabel()}</span>
-                            </div>
-                        </motion.div>
-                    ))}
+                        </div>
+                    </div>
                 </div>
             )}
 
