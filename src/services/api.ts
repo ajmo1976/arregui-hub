@@ -150,7 +150,7 @@ export const inventoryApi = {
     deleteRole: (id: number) => api.delete(`/users/roles/${id}`),
 
     // Services
-    getServiceEvents: (limit: number = 5000) => api.get('/services/events', { params: { limit, exclude_company: 'Planificación' } }),
+    getServiceEvents: (limit: number = 5000, exclude_company?: string) => api.get('/services/events', { params: { limit, exclude_company } }),
     createServiceEvent: (data: any) => api.post('/services/events', data),
     getServiceEvent: (id: number) => api.get(`/services/events/${id}`),
     updateServiceEvent: (id: number, data: any) => api.patch(`/services/events/${id}`, data),

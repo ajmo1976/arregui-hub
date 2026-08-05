@@ -204,7 +204,7 @@ export default function ServicesCalendar({ onEventClick }: ServicesCalendarProps
         console.log("Calendar Module: Starting fetchEvents...");
         setLoading(true);
         try {
-            const res = await inventoryApi.getServiceEvents();
+            const res = await inventoryApi.getServiceEvents(5000, 'Planificación');
             console.log("Calendar Module: API Response:", res.data);
 
             // Flatten events to single service entries for the calendar
@@ -212,6 +212,7 @@ export default function ServicesCalendar({ onEventClick }: ServicesCalendarProps
 
             if (res.data && Array.isArray(res.data)) {
                 res.data.forEach((ev: any) => {
+                    if (ev.company === 'Planificación') return;
                     const details = ev.details || [];
                     details.forEach((detail: any) => {
                         flattened.push({

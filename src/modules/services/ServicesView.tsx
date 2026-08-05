@@ -78,7 +78,7 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
     const fetchEvents = async () => {
         setLoading(true);
         try {
-            const res = await inventoryApi.getServiceEvents();
+            const res = await inventoryApi.getServiceEvents(5000, 'Planificación');
             setEvents(res.data);
         } catch (err) {
             toast.error('Error al cargar servicios');
