@@ -356,7 +356,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                                 <td colspan="4" class="text-right" style="font-weight: 900; font-size: 14px; padding-top: 10px;">Subtotal Servicio:</td>
                                 <td class="text-right" style="font-weight: 900; font-size: 14px; padding-top: 10px;">${formatPrice(detailTotal)}</td>
                             </tr>
-                            ${true ? `
+                            ${details.length === 1 ? `
                             <tr>
                                 <td colspan="4" class="text-right" style="font-weight: 900; font-size: 14px;">IVA (${event.iva_percentage ?? 0}%):</td>
                                 <td class="text-right" style="font-weight: 900; font-size: 14px;">${formatPrice(detailTotal * ((event.iva_percentage ?? 0) / 100))}</td>
@@ -746,9 +746,24 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
 
                     ${detailsHtml}
 
-                    <div class="grand-total-box">
+                    ${details.length > 1 ? `
+                    <div style="margin-top: 25px; display: flex; justify-content: flex-end; padding-right: 15px;">
+                        <table style="width: 250px; border-collapse: collapse; margin-bottom: 0;">
+                            <tr>
+                                <td style="padding: 6px; text-align: right; font-weight: 800; font-size: 13px; color: #4b5563; border: none;">Subtotal Base:</td>
+                                <td style="padding: 6px; text-align: right; font-weight: 900; font-size: 13px; color: #1f2937; border: none;">${formatPrice(grandTotal)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px; text-align: right; font-weight: 800; font-size: 13px; color: #4b5563; border: none; border-bottom: 2px solid #e5e7eb;">IVA (${event.iva_percentage ?? 0}%):</td>
+                                <td style="padding: 6px; text-align: right; font-weight: 900; font-size: 13px; color: #1f2937; border: none; border-bottom: 2px solid #e5e7eb;">${formatPrice(grandTotal * ((event.iva_percentage ?? 0) / 100))}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    ` : ''}
+
+                    <div class="grand-total-box" ${details.length > 1 ? 'style="margin-top: 15px;"' : ''}>
                         <span class="grand-total-label">${event.status === 'Facturado' ? 'Total Facturado' : (event.status === 'Cobrado' ? 'Total Cobrado' : 'Total a Facturar')} Servicio #${event.id}:</span>
-                        <span class="grand-total-value">${formatPrice(event.total_amount || grandTotal)}</span>
+                        <span class="grand-total-value">${formatPrice(event.total_amount || (grandTotal + grandTotal * ((event.iva_percentage ?? 0) / 100)))}</span>
                     </div>
 
                     <div class="footer">
