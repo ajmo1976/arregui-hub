@@ -68,6 +68,13 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
     const [filterCostCenter, setFilterCostCenter] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 25;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterId, filterTitleResp, filterDate, filterLocation, filterCostCenter, filterStatus]);
+
     const fetchEvents = async () => {
         setLoading(true);
         try {
@@ -1294,6 +1301,9 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
         })
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+    const totalPages = Math.ceil(filteredEvents.length / ITEMS_PER_PAGE);
+    const paginatedEvents = filteredEvents.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     if (showModal || editingEvent) {
         return (
             <div className="w-full h-full font-inter animate-in fade-in duration-200">
@@ -1592,7 +1602,7 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredEvents.map((ev, index) => (
+                                            paginatedEvents.map((ev, index) => (
                                                 <motion.tr
                                                     key={ev.id}
                                                     initial={{ opacity: 0, y: 10 }}
@@ -1743,6 +1753,33 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
                                 </tbody>
                             </table>
                         </div>
+                        
+                        {totalPages > 1 && (
+                            <div className="px-8 py-4 border-t border-gray-50 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/50 flex items-center justify-between">
+                                <span className="text-sm text-gray-500">
+                                    Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} a {Math.min(currentPage * ITEMS_PER_PAGE, filteredEvents.length)} de {filteredEvents.length} servicios
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Anterior
+                                    </button>
+                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300 px-2">
+                                        Página {currentPage} de {totalPages}
+                                    </span>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Siguiente
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* early returns handle form and detail views */}

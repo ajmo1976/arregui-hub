@@ -1389,7 +1389,6 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                                                     <th className="px-3 py-4 text-center bg-amber-50/20 dark:bg-amber-955/10">Cenas</th>
                                                     <th className="px-3 py-4 text-center bg-amber-50/20 dark:bg-amber-955/10">Sobre Cenas</th>
                                                     <th className="px-3 py-4 text-center bg-emerald-50/20 dark:bg-emerald-955/10">Concentrados</th>
-                                                    <th className="px-3 py-4 text-center bg-purple-50/20 dark:bg-purple-955/10">Col Norte (Ext)</th>
                                                     <th className="px-3 py-4 text-center bg-orange-50/20 dark:bg-orange-955/10">ColSur</th>
                                                     <th className="px-3 py-4 text-center text-primary bg-primary/5 font-bold">Total Platos</th>
                                                     <th className="px-6 py-4">Acción</th>
@@ -1469,15 +1468,6 @@ export default function WeeklyPlanning({ onClose }: WeeklyPlanningProps) {
                                                                     className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
                                                                     value={row.concentrados || ''}
                                                                     onChange={e => updateRowField(row.id, 'concentrados', e.target.value === '' ? 0 : parseInt(e.target.value))}
-                                                                />
-                                                            </td>
-                                                            {/* Col Norte Ext */}
-                                                            <td className="px-2 py-4 bg-purple-50/10 dark:bg-purple-955/5">
-                                                                <input 
-                                                                    type="number"
-                                                                    className="w-16 px-2 py-1.5 bg-gray-50 dark:bg-gray-955 border border-transparent dark:border-gray-855 rounded-xl outline-none text-center font-bold text-sm text-gray-955 dark:text-white mx-auto block"
-                                                                    value={row.colNorteExt || ''}
-                                                                    onChange={e => updateRowField(row.id, 'colNorteExt', e.target.value === '' ? 0 : parseInt(e.target.value))}
                                                                 />
                                                             </td>
                                                             {/* ColSur */}

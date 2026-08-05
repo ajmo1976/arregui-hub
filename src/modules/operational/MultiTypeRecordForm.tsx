@@ -432,7 +432,7 @@ export default function MultiTypeRecordForm({ onClose, onSuccess, initialType, i
                                                     <th className="px-4 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Fecha</th>
                                                     {recordType === 'metropolitano' && (
                                                         <>
-                                                            {['PLC', 'SM (Almuerzos)', 'SM (Cenas)', 'SM (Sobre Cenas)', 'Col. Norte', 'Concentrados', 'Col. Norte (Ext)', 'Col. Sur'].map(t => <th key={t} className="px-3 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">{t}</th>)}
+                                                            {['PLC', 'SM (Almuerzos)', 'SM (Cenas)', 'SM (Sobre Cenas)', 'Col. Norte', 'Concentrados', 'Col. Sur'].map(t => <th key={t} className="px-3 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">{t}</th>)}
                                                         </>
                                                     )}
                                                     {recordType === 'cep' && (
@@ -474,7 +474,7 @@ export default function MultiTypeRecordForm({ onClose, onSuccess, initialType, i
                                                         </td>
                                                         {recordType === 'metropolitano' && (
                                                             <>
-                                                                {['plc', 'sm', 'cenas', 'sc', 'cnPlanta', 'conc', 'cnExt', 'csExt'].map(field => (
+                                                                {['plc', 'sm', 'cenas', 'sc', 'cnPlanta', 'conc', 'csExt'].map(field => (
                                                                     <td key={field} className="px-2 py-2">
                                                                         <input type="number" className="w-20 p-2 mx-auto block bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg text-sm outline-none focus:border-primary text-center" value={row[field]} onChange={e => { const n = [...dailyGrid]; n[idx][field] = e.target.value; setDailyGrid(n); }} placeholder="-" />
                                                                     </td>
