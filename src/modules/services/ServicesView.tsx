@@ -1321,8 +1321,7 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
             </div>
         );
     }
-
-    if (selectedEvent) {
+    if (selectedEvent && !showModal && !editingEvent) {
         return (
             <div className="w-full h-full font-inter animate-in fade-in duration-200">
                 <ServiceDetailView
@@ -1377,7 +1376,7 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
                             </button>
                             <button
                                 onClick={() => setShowModal(true)}
-                                className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-6 py-3.5 rounded-2xl font-bold shadow-lg shadow-primary/20 transition-all active:scale-95"
+                                className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-3.5 rounded-2xl font-bold shadow-lg shadow-primary/20 transition-all active:scale-95"
                             >
                                 <Plus size={20} />
                                 <span>Nuevo Servicio</span>
