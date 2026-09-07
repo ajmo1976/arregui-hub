@@ -26,45 +26,55 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
                 const fetchedProducts = itemRes.data || [];
                 setProducts(fetchedProducts);
                 setCategories(catRes.data || []);
-
-                // Auto-inject the service cost item if not present
-                const serviceCostItem = fetchedProducts.find((p: any) => p.sku === 'SERV-001' || p.name?.trim() === 'Servicio');
-                if (serviceCostItem) {
-                    const currentItems = data.selected_items || [];
-                    const hasServiceCost = currentItems.some((item: any) => item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || item.id === serviceCostItem.id);
-                    if (!hasServiceCost) {
-                        const newItem = {
-                            id: serviceCostItem.id,
-                            name: serviceCostItem.name,
-                            sku: serviceCostItem.sku,
-                            price: serviceCostItem.price,
-                            quantity: 1,
-                            unit: 'Unidad',
-                            is_sold_by_case: serviceCostItem.is_sold_by_case,
-                            units_per_case: serviceCostItem.units_per_case || 1
-                        };
-                        const updatedItems = [...currentItems, newItem];
-                        
-                        const itemsTotal = updatedItems.reduce((acc: number, item: any) => {
-                            const catalogItem = fetchedProducts.find((p: any) => String(p.id) === String(item.id));
-                            const price = item.price || 0;
-                            const isItemService = item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || (catalogItem && (catalogItem.sku === 'SERV-001' || catalogItem.name?.trim() === 'Servicio'));
-                            const quantity = isItemService ? 1 : (item.quantity || 1);
-                            const byCase = catalogItem ? catalogItem.is_sold_by_case : item.is_sold_by_case;
-                            const units = catalogItem ? catalogItem.units_per_case : (item.units_per_case || 1);
-                            const multiplier = (item.unit === 'Caja' && byCase) ? units : 1;
-                            return acc + (price * quantity * multiplier);
-                        }, 0);
-
-                        onChange({ ...data, selected_items: updatedItems, estimated_amount: parseFloat(itemsTotal.toFixed(2)) });
-                    }
-                }
             } catch (err) {
                 console.error("Error loading catering menu data", err);
             }
         };
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (products.length === 0) return;
+        
+        const serviceCostItem = products.find((p: any) => p.sku === 'SERV-001' || p.name?.trim() === 'Servicio');
+        if (serviceCostItem) {
+            const currentItems = data.selected_items || [];
+            const hasServiceCost = currentItems.some((item: any) => item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || item.id === serviceCostItem.id);
+            if (!hasServiceCost) {
+                const newItem = {
+                    id: serviceCostItem.id,
+                    name: serviceCostItem.name,
+                    sku: serviceCostItem.sku,
+                    price: serviceCostItem.price,
+                    quantity: 1,
+                    unit: 'Unidad',
+                    is_sold_by_case: serviceCostItem.is_sold_by_case,
+                    units_per_case: serviceCostItem.units_per_case || 1
+                };
+                let updatedItems = [...currentItems, newItem];
+                updatedItems.sort((a, b) => {
+                    const isAService = a.sku === 'SERV-001' || a.name?.trim() === 'Servicio';
+                    const isBService = b.sku === 'SERV-001' || b.name?.trim() === 'Servicio';
+                    if (isAService && !isBService) return 1;
+                    if (!isAService && isBService) return -1;
+                    return 0;
+                });
+                
+                const itemsTotal = updatedItems.reduce((acc: number, item: any) => {
+                    const catalogItem = products.find((p: any) => String(p.id) === String(item.id));
+                    const price = item.price || 0;
+                    const isItemService = item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || (catalogItem && (catalogItem.sku === 'SERV-001' || catalogItem.name?.trim() === 'Servicio'));
+                    const quantity = isItemService ? 1 : (item.quantity || 1);
+                    const byCase = catalogItem ? catalogItem.is_sold_by_case : item.is_sold_by_case;
+                    const units = catalogItem ? catalogItem.units_per_case : (item.units_per_case || 1);
+                    const multiplier = (item.unit === 'Caja' && byCase) ? units : 1;
+                    return acc + (price * quantity * multiplier);
+                }, 0);
+
+                onChange({ ...data, selected_items: updatedItems, estimated_amount: parseFloat(itemsTotal.toFixed(2)) });
+            }
+        }
+    }, [products, data.selected_items, index]);
 
     const toggleItem = (product: any) => {
         const isServiceCost = product.sku === 'SERV-001' || product.name?.trim() === 'Servicio';
@@ -112,7 +122,15 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
     };
 
     const recalculateTotal = (items: any[], attendees: number) => {
-        const itemsTotal = items.reduce((acc: number, item: any) => {
+        const sortedItems = [...items].sort((a, b) => {
+            const isAService = a.sku === 'SERV-001' || a.name?.trim() === 'Servicio';
+            const isBService = b.sku === 'SERV-001' || b.name?.trim() === 'Servicio';
+            if (isAService && !isBService) return 1;
+            if (!isAService && isBService) return -1;
+            return 0;
+        });
+
+        const itemsTotal = sortedItems.reduce((acc: number, item: any) => {
             const catalogItem = products.find(p => String(p.id) === String(item.id));
             const price = item.price || 0;
             const isItemService = item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || (catalogItem && (catalogItem.sku === 'SERV-001' || catalogItem.name?.trim() === 'Servicio'));
@@ -122,7 +140,7 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
             const multiplier = (item.unit === 'Caja' && byCase) ? units : 1;
             return acc + (price * quantity * multiplier);
         }, 0);
-        onChange({ ...data, selected_items: items, estimated_amount: parseFloat(itemsTotal.toFixed(2)) });
+        onChange({ ...data, selected_items: sortedItems, estimated_amount: parseFloat(itemsTotal.toFixed(2)) });
     };
 
     const filteredProducts = products.filter(p => {

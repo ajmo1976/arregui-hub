@@ -104,7 +104,11 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                 title: eventData.title.trim() || 'Servicio',
                 request_date: eventData.request_date ? new Date(eventData.request_date).toISOString() : new Date().toISOString(),
                 status_date: eventData.status_date ? new Date(eventData.status_date).toISOString() : new Date().toISOString(),
-                details: details.map(d => ({ ...d, service_date: new Date(d.service_date).toISOString() }))
+                details: details.map(d => ({ 
+                    ...d, 
+                    service_date: d.service_date ? new Date(d.service_date).toISOString() : new Date().toISOString(),
+                    attendees: parseInt(d.attendees) || 0
+                }))
             };
 
             const res = isEdit ? await inventoryApi.updateServiceEvent(initialData.id, payload) : await inventoryApi.createServiceEvent(payload);
