@@ -9,6 +9,11 @@ interface ServiceDetailCardProps {
     onChange: (data: any) => void;
 }
 
+const isProductService = (item: any, catalogItem?: any) => {
+    const check = (x: any) => x?.sku === 'SERV-001' || x?.name?.trim().toLowerCase() === 'servicio';
+    return check(item) || check(catalogItem);
+};
+
 export default function ServiceDetailCard({ index, data, onChange }: ServiceDetailCardProps) {
     const [products, setProducts] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -36,10 +41,10 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
     useEffect(() => {
         if (products.length === 0) return;
         
-        const serviceCostItem = products.find((p: any) => p.sku === 'SERV-001' || p.name?.trim() === 'Servicio');
+        const serviceCostItem = products.find((p: any) => isProductService(p));
         if (serviceCostItem) {
             const currentItems = data.selected_items || [];
-            const hasServiceCost = currentItems.some((item: any) => item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || item.id === serviceCostItem.id);
+            const hasServiceCost = currentItems.some((item: any) => isProductService(item) || item.id === serviceCostItem.id);
             if (!hasServiceCost) {
                 const newItem = {
                     id: serviceCostItem.id,
@@ -53,8 +58,8 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
                 };
                 let updatedItems = [...currentItems, newItem];
                 updatedItems.sort((a, b) => {
-                    const isAService = a.sku === 'SERV-001' || a.name?.trim() === 'Servicio';
-                    const isBService = b.sku === 'SERV-001' || b.name?.trim() === 'Servicio';
+                    const isAService = isProductService(a);
+                    const isBService = isProductService(b);
                     if (isAService && !isBService) return 1;
                     if (!isAService && isBService) return -1;
                     return 0;
@@ -63,7 +68,7 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
                 const itemsTotal = updatedItems.reduce((acc: number, item: any) => {
                     const catalogItem = products.find((p: any) => String(p.id) === String(item.id));
                     const price = item.price || 0;
-                    const isItemService = item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || (catalogItem && (catalogItem.sku === 'SERV-001' || catalogItem.name?.trim() === 'Servicio'));
+                    const isItemService = isProductService(item, catalogItem);
                     const quantity = isItemService ? 1 : (item.quantity || 1);
                     const byCase = catalogItem ? catalogItem.is_sold_by_case : item.is_sold_by_case;
                     const units = catalogItem ? catalogItem.units_per_case : (item.units_per_case || 1);
@@ -77,7 +82,7 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
     }, [products, data.selected_items, index]);
 
     const toggleItem = (product: any) => {
-        const isServiceCost = product.sku === 'SERV-001' || product.name?.trim() === 'Servicio';
+        const isServiceCost = isProductService(product);
         if (isServiceCost) return;
 
         const currentItems = data.selected_items || [];
@@ -103,7 +108,7 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
 
     const updateItemQuantity = (productId: number, quantity: number | string) => {
         const catalogItem = products.find(p => String(p.id) === String(productId));
-        if (catalogItem?.sku === 'SERV-001' || catalogItem?.name?.trim() === 'Servicio') return;
+        if (isProductService(catalogItem)) return;
 
         const newItems = (data.selected_items || []).map((item: any) =>
             String(item.id) === String(productId) 
@@ -115,7 +120,7 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
 
     const updateItemUnit = (productId: number, unit: string) => {
         const catalogItem = products.find(p => String(p.id) === String(productId));
-        if (catalogItem?.sku === 'SERV-001' || catalogItem?.name?.trim() === 'Servicio') return;
+        if (isProductService(catalogItem)) return;
 
         const newItems = (data.selected_items || []).map((item: any) =>
             String(item.id) === String(productId) ? { ...item, unit } : item
@@ -125,8 +130,10 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
 
     const recalculateTotal = (items: any[], attendees: number) => {
         const sortedItems = [...items].sort((a, b) => {
-            const isAService = a.sku === 'SERV-001' || a.name?.trim() === 'Servicio';
-            const isBService = b.sku === 'SERV-001' || b.name?.trim() === 'Servicio';
+            const catA = products.find(p => String(p.id) === String(a.id));
+            const catB = products.find(p => String(p.id) === String(b.id));
+            const isAService = isProductService(a, catA);
+            const isBService = isProductService(b, catB);
             if (isAService && !isBService) return 1;
             if (!isAService && isBService) return -1;
             return 0;
@@ -135,7 +142,7 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
         const itemsTotal = sortedItems.reduce((acc: number, item: any) => {
             const catalogItem = products.find(p => String(p.id) === String(item.id));
             const price = item.price || 0;
-            const isItemService = item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || (catalogItem && (catalogItem.sku === 'SERV-001' || catalogItem.name?.trim() === 'Servicio'));
+            const isItemService = isProductService(item, catalogItem);
             const quantity = isItemService ? 1 : (item.quantity || 1);
             const byCase = catalogItem ? catalogItem.is_sold_by_case : item.is_sold_by_case;
             const units = catalogItem ? catalogItem.units_per_case : (item.units_per_case || 1);
@@ -193,7 +200,7 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
                     <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 pb-16 md:pb-0">
                         {filteredProducts.map(p => {
                             const isSelected = !!data.selected_items?.find((item: any) => item.id === p.id);
-                            const isServiceCost = p.sku === 'SERV-001' || p.name?.trim() === 'Servicio';
+                            const isServiceCost = isProductService(p);
 
                             return (
                                 <div key={p.id} className={`flex flex-col p-3 rounded-2xl border transition-all ${isSelected ? 'bg-primary/[0.03] border-primary/20' : 'bg-transparent border-transparent hover:bg-gray-50 dark:hover:bg-gray-900'}`}>
@@ -244,9 +251,17 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
                                 <p className="text-sm font-medium text-center">No hay ítems seleccionados para este servicio.</p>
                             </div>
                         ) : (
-                            data.selected_items.map((item: any) => {
+                            [...data.selected_items].sort((a, b) => {
+                                const catA = products.find(p => String(p.id) === String(a.id));
+                                const catB = products.find(p => String(p.id) === String(b.id));
+                                const isAService = isProductService(a, catA);
+                                const isBService = isProductService(b, catB);
+                                if (isAService && !isBService) return 1;
+                                if (!isAService && isBService) return -1;
+                                return 0;
+                            }).map((item: any) => {
                                 const catalogItem = products.find(p => String(p.id) === String(item.id));
-                                const isServiceCost = item.sku === 'SERV-001' || item.name?.trim() === 'Servicio' || catalogItem?.sku === 'SERV-001' || catalogItem?.name?.trim() === 'Servicio';
+                                const isServiceCost = isProductService(item) || isProductService(catalogItem);
                                 const byCase = catalogItem ? catalogItem.is_sold_by_case : item.is_sold_by_case;
                                 const units = catalogItem ? catalogItem.units_per_case : (item.units_per_case || 1);
                                 
