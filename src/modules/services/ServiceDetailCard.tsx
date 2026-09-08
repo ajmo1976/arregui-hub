@@ -153,7 +153,7 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
         <div className="h-full flex flex-col">
             <div className="grid grid-cols-1 md:grid-cols-2 h-full divide-y md:divide-y-0 md:divide-x divide-gray-100 dark:divide-gray-800">
                 {/* Left Panel: Catalog */}
-                <div className="flex flex-col p-6 h-full">
+                <div className="flex flex-col p-6 h-full min-h-0">
                     <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-400 mb-4">
                         <UtensilsCrossed size={14} /> Catálogo de Menú
                     </label>
@@ -225,7 +225,7 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
                 </div>
 
                 {/* Right Panel: Selected Items (Cart) */}
-                <div className="flex flex-col p-6 bg-gray-50/30 dark:bg-gray-900/30 h-full">
+                <div className="flex flex-col p-6 bg-gray-50/30 dark:bg-gray-900/30 h-full min-h-0">
                     <label className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-primary mb-4">
                         <div className="flex items-center gap-2">
                             <span className="w-5 h-5 bg-primary/10 text-primary rounded-full flex items-center justify-center text-[10px] font-bold">

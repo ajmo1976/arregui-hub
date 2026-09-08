@@ -156,7 +156,7 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+            <div className={`flex-1 custom-scrollbar p-8 ${currentStep === 3 ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}`}>
                 {currentStep === 1 && (
                     <div className="max-w-4xl mx-auto space-y-6">
                         <h3 className="text-xl font-black text-gray-900 dark:text-white mb-8">Paso 1: Información General del Evento</h3>
@@ -257,7 +257,7 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                 )}
 
                 {currentStep === 3 && (
-                    <div className="h-full flex flex-col md:flex-row gap-6">
+                    <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-6">
                         {/* Sidebar */}
                         <div className="w-full md:w-64 flex flex-col gap-2 shrink-0">
                             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">Paso 3: Menú</h3>
