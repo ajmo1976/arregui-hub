@@ -101,12 +101,14 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
         recalculateTotal(newItems, data.attendees);
     };
 
-    const updateItemQuantity = (productId: number, quantity: number) => {
+    const updateItemQuantity = (productId: number, quantity: number | string) => {
         const catalogItem = products.find(p => String(p.id) === String(productId));
         if (catalogItem?.sku === 'SERV-001' || catalogItem?.name?.trim() === 'Servicio') return;
 
         const newItems = (data.selected_items || []).map((item: any) =>
-            String(item.id) === String(productId) ? { ...item, quantity: Math.max(0, quantity) } : item
+            String(item.id) === String(productId) 
+                ? { ...item, quantity: typeof quantity === 'number' ? Math.max(0, quantity) : quantity } 
+                : item
         );
         recalculateTotal(newItems, data.attendees);
     };
@@ -266,11 +268,31 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
                                         {!isServiceCost && (
                                             <div className="flex items-center gap-4 mt-4 bg-gray-50 dark:bg-gray-900 p-1.5 rounded-xl self-start w-fit">
                                                 <div className="flex items-center border-r border-gray-200 dark:border-gray-700 pr-4">
-                                                    <button onClick={() => updateItemQuantity(item.id, (item.quantity || 1) - 1)} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all" disabled={item.quantity <= 1}>
+                                                    <button onClick={() => updateItemQuantity(item.id, (Number(item.quantity) || 1) - 1)} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all" disabled={(Number(item.quantity) || 1) <= 1}>
                                                         <Minus size={14} />
                                                     </button>
-                                                    <span className="w-10 text-center font-bold text-sm">{item.quantity || 1}</span>
-                                                    <button onClick={() => updateItemQuantity(item.id, (item.quantity || 1) + 1)} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all">
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        className="w-12 text-center font-bold text-sm bg-transparent outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                        value={item.quantity !== undefined ? item.quantity : ''}
+                                                        onChange={(e) => {
+                                                            const rawVal = e.target.value;
+                                                            if (rawVal === '') {
+                                                                updateItemQuantity(item.id, '');
+                                                            } else {
+                                                                const val = parseInt(rawVal, 10);
+                                                                updateItemQuantity(item.id, isNaN(val) ? '' : val);
+                                                            }
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            const val = Number(item.quantity);
+                                                            if (item.quantity === '' || item.quantity === undefined || isNaN(val) || val < 1) {
+                                                                updateItemQuantity(item.id, 1);
+                                                            }
+                                                        }}
+                                                    />
+                                                    <button onClick={() => updateItemQuantity(item.id, (Number(item.quantity) || 1) + 1)} className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all">
                                                         <Plus size={14} />
                                                     </button>
                                                 </div>
