@@ -258,7 +258,7 @@ export default function ProductForm({ product, onClose, onSuccess }: Props) {
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-bold text-gray-600 dark:text-gray-400 ml-1">Stock Mínimo</label>
                                         <input
-                                            type="number"
+                                            type="number" step="any"
                                             className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all dark:text-white text-sm font-medium"
                                             value={formData.min_stock}
                                             onChange={e => setFormData({ ...formData, min_stock: parseFloat(e.target.value) })}
@@ -267,7 +267,7 @@ export default function ProductForm({ product, onClose, onSuccess }: Props) {
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-bold text-gray-600 dark:text-gray-400 ml-1">Stock Crítico</label>
                                         <input
-                                            type="number"
+                                            type="number" step="any"
                                             className="w-full px-4 py-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition-all dark:text-red-400 text-red-600 text-sm font-bold"
                                             value={formData.critical_stock}
                                             onChange={e => setFormData({ ...formData, critical_stock: parseFloat(e.target.value) })}

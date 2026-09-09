@@ -283,7 +283,7 @@ export default function InventoryPurchaseForm({ onClose, onSuccess }: Props) {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <input
-                                                        type="number"
+                                                        type="number" step="any"
                                                         className="w-full px-0 py-2 bg-green-50/30 dark:bg-green-900/10 border-2 border-green-500/50 rounded-xl text-center font-black text-lg outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                         value={item.quantity}
                                                         onChange={e => updateItem(item.id, 'quantity', parseFloat(e.target.value))}

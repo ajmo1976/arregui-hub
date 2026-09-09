@@ -259,9 +259,9 @@ export default function ServiceForm({ onClose, initialData }: ServiceFormProps) 
                 {currentStep === 3 && (
                     <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-6">
                         {/* Sidebar */}
-                        <div className="w-full md:w-64 flex flex-col gap-2 shrink-0">
-                            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">Paso 3: Menú</h3>
-                            <p className="text-xs text-gray-500 mb-4">Selecciona el servicio al que agregarás comida:</p>
+                        <div className="w-full md:w-64 flex flex-col gap-2 shrink-0 overflow-y-auto custom-scrollbar pr-2 pb-4">
+                            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2 shrink-0">Paso 3: Menú</h3>
+                            <p className="text-xs text-gray-500 mb-4 shrink-0">Selecciona el servicio al que agregarás comida:</p>
                             {details.map((d, idx) => (
                                 <button key={idx} onClick={() => setActiveDetailIndex(idx)} className={`p-4 rounded-2xl text-left transition-all border ${activeDetailIndex === idx ? 'bg-primary text-white border-primary shadow-md' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700'}`}>
                                     <div className={`text-[10px] font-black uppercase tracking-wider mb-1 ${activeDetailIndex === idx ? 'text-primary-100' : 'text-gray-400'}`}>Servicio #{idx + 1}</div>

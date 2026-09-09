@@ -288,7 +288,8 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
                                                     </button>
                                                     <input
                                                         type="number"
-                                                        min="1"
+                                                        min="0"
+                                                        step="any"
                                                         className="w-12 text-center font-bold text-sm bg-transparent outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                         value={item.quantity !== undefined ? item.quantity : ''}
                                                         onChange={(e) => {
@@ -296,13 +297,13 @@ export default function ServiceDetailCard({ index, data, onChange }: ServiceDeta
                                                             if (rawVal === '') {
                                                                 updateItemQuantity(item.id, '');
                                                             } else {
-                                                                const val = parseInt(rawVal, 10);
+                                                                const val = parseFloat(rawVal);
                                                                 updateItemQuantity(item.id, isNaN(val) ? '' : val);
                                                             }
                                                         }}
                                                         onBlur={(e) => {
                                                             const val = Number(item.quantity);
-                                                            if (item.quantity === '' || item.quantity === undefined || isNaN(val) || val < 1) {
+                                                            if (item.quantity === '' || item.quantity === undefined || isNaN(val) || val <= 0) {
                                                                 updateItemQuantity(item.id, 1);
                                                             }
                                                         }}
