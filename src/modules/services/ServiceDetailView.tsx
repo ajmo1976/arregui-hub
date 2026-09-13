@@ -306,7 +306,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                             <td>${item.name}</td>
                             <td class="text-center">${qty}</td>
                             <td class="text-center">${unit}</td>
-                            <td class="text-right">${formatPrice(price)}</td>
+                            <td class="text-right">${formatPrice(price * mult)}</td>
                             <td class="text-right font-bold">${formatPrice(sub)}</td>
                         </tr>
                     `;
@@ -835,7 +835,7 @@ export default function ServiceDetailView({ event, onClose, onEdit }: Props) {
                     const reqs = (d.additional_requirements || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ');
                     const obs = (d.observations || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ');
 
-                    csvContent += `Servicio ${idx + 1};${dateStr};${timeStr};${location};${attendees};"${itemName}";${qty};${unit};${price};${sub};"${reqs}";"${obs}"\r\n`;
+                    csvContent += `Servicio ${idx + 1};${dateStr};${timeStr};${location};${attendees};"${itemName}";${qty};${unit};${price * mult};${sub};"${reqs}";"${obs}"\r\n`;
                 });
             }
         });

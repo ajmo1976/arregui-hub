@@ -988,7 +988,7 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
                                 <td>${item.name}</td>
                                 <td class="text-center">${qty}</td>
                                 <td class="text-center">${unit}</td>
-                                <td class="text-right">${formatPrice(price)}</td>
+                                <td class="text-right">${formatPrice(price * mult)}</td>
                                 <td class="text-right font-bold">${formatPrice(sub)}</td>
                             </tr>
                         `;
@@ -1188,7 +1188,7 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
                         const reqs = (d.additional_requirements || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ');
                         const obs = (d.observations || '').replace(/"/g, '""').replace(/;/g, ',').replace(/\r?\n/g, ' ');
 
-                        csvContent += `${event.id};"${eventTitle}";"${event.responsible || ''}";"${event.company || 'NO ESPECIFICADA'}";"${event.cost_center || 'NO ESPECIFICADO'}";${requestDateStr};"${event.status || ''}";"${event.invoice_number || ''}";Servicio ${originalIdx + 1};${dateStr};${timeStr};${location};${attendees};"${itemName}";${qty};${unit};${price};${sub};"${reqs}";"${obs}"\r\n`;
+                        csvContent += `${event.id};"${eventTitle}";"${event.responsible || ''}";"${event.company || 'NO ESPECIFICADA'}";"${event.cost_center || 'NO ESPECIFICADO'}";${requestDateStr};"${event.status || ''}";"${event.invoice_number || ''}";Servicio ${originalIdx + 1};${dateStr};${timeStr};${location};${attendees};"${itemName}";${qty};${unit};${price * mult};${sub};"${reqs}";"${obs}"\r\n`;
                     });
                 }
             });
