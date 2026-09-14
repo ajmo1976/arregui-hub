@@ -899,10 +899,9 @@ export default function DailyRecordsView() {
     const fetchLogs = async (catId?: number | null) => {
         try {
             setLoading(true);
-            const targetCatId = catId !== undefined ? catId : activeCategoryId;
             const [logsRes, eventsRes, pricesRes] = await Promise.all([
-                inventoryApi.getDailyLogs(searchTerm, targetCatId ?? undefined),
-                inventoryApi.getServiceEvents(),
+                inventoryApi.getDailyLogs(searchTerm, undefined, 1000),
+                inventoryApi.getServiceEvents(1000),
                 inventoryApi.getMealPrices().catch(() => ({ data: [] }))
             ]);
             setLogs(Array.isArray(logsRes.data) ? logsRes.data : []);
@@ -1063,9 +1062,10 @@ export default function DailyRecordsView() {
     }
 
     const sortedLogs = Array.isArray(logs) ? [...logs].sort((a, b) => b.log_date.localeCompare(a.log_date)) : [];
-    const filteredLogs = sortedLogs.filter(log =>
-        log.log_date && log.log_date.includes(searchTerm)
-    );
+    const filteredLogs = sortedLogs.filter(log => {
+        if (!log.log_date || !log.log_date.includes(searchTerm)) return false;
+        return log.category_id === null || log.category_id === undefined;
+    });
 
     const formatDate = (dateStr: string) => {
         try {
