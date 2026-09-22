@@ -13,6 +13,7 @@ interface CurrencyContextType {
     convertPrice: (amountUSD: number) => number;
     isLoading: boolean;
     canShowPrices: boolean;
+    refreshRate: () => Promise<void>;
 }
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
@@ -28,20 +29,23 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Determine if the user can see prices (Basic role cannot)
     const canShowPrices = user?.is_superuser || (user?.role_name?.toLowerCase() !== 'básico' && user?.role_name?.toLowerCase() !== 'basico');
 
+    const refreshRate = async () => {
+        try {
+            const res = await inventoryApi.getSystemConfig();
+            setExchangeRate(res.data.exchange_rate);
+        } catch (err) {
+            console.error('Error fetching exchange rate:', err);
+        }
+    };
+
     useEffect(() => {
         if (!user) {
             setIsLoading(false);
             return;
         }
         const fetchConfig = async () => {
-            try {
-                const res = await inventoryApi.getSystemConfig();
-                setExchangeRate(res.data.exchange_rate);
-            } catch (err) {
-                console.error('Error fetching exchange rate:', err);
-            } finally {
-                setIsLoading(false);
-            }
+            await refreshRate();
+            setIsLoading(false);
         };
         fetchConfig();
     }, [user]);
@@ -87,7 +91,8 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             formatPrice,
             convertPrice,
             isLoading,
-            canShowPrices
+            canShowPrices,
+            refreshRate
         }}>
             {children}
         </CurrencyContext.Provider>

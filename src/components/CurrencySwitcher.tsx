@@ -37,7 +37,7 @@ export const CurrencySwitcher: React.FC<CurrencySwitcherProps> = ({ variant = 'l
             {exchangeRate > 0 && (
                 <div className={`mx-2 text-[8px] font-bold uppercase tracking-tighter hidden md:block ${variant === 'dark' ? 'text-white/20' : 'text-gray-300'
                     }`}>
-                    Rate: {exchangeRate.toFixed(2)}
+                    Rate: {exchangeRate.toFixed(4)}
                 </div>
             )}
         </div>

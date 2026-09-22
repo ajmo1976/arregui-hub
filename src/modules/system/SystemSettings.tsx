@@ -19,6 +19,7 @@ import {
 import { inventoryApi } from '../../services/api';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 const MAIN_CATEGORIES = [
     { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
@@ -57,6 +58,7 @@ const MEAL_TYPES_MAP: Record<string, string> = {
 };
 
 export default function SystemSettings() {
+    const { refreshRate } = useCurrency();
     const [loading, setLoading] = useState(false);
     const [activeMainTab, setActiveMainTab] = useState('notificaciones');
     const [activeParamTab, setActiveParamTab] = useState('prices');
@@ -164,6 +166,7 @@ export default function SystemSettings() {
                 loading: 'Consultando BCV...',
                 success: (res) => {
                     fetchRates();
+                    refreshRate();
                     return `Tasa actualizada: ${res.data.rate_value} VES`;
                 },
                 error: 'No se pudo conectar con el BCV'
@@ -413,7 +416,7 @@ export default function SystemSettings() {
                                                         </p>
                                                         <div className="flex items-baseline gap-3">
                                                             <h3 className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">
-                                                                {rates[0]?.rate_value?.toFixed(2) || '0.00'}
+                                                                {rates[0]?.rate_value?.toFixed(4) || '0.0000'}
                                                             </h3>
                                                             <span className="text-xl font-bold text-gray-400">VES</span>
                                                         </div>

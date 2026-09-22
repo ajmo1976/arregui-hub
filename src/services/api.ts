@@ -172,7 +172,7 @@ export const inventoryApi = {
     updateSettings: (data: any) => api.post('/system/settings/email', data),
     getEmailConfig: () => api.get('/system/settings/email'),
     updateEmailConfig: (data: any) => api.post('/system/settings/email', data),
-    getSystemConfig: () => api.get('/system/config'),
+    getSystemConfig: () => api.get(`/system/config?_t=${Date.now()}`),
     getParameters: (category?: string) => api.get(`/system/parameters${category ? `?category=${category}` : ''}`),
     createParameter: (data: any) => api.post('/system/parameters', data),
     updateParameter: (id: number, data: any) => api.patch(`/system/parameters/${id}`, data),
@@ -206,8 +206,8 @@ export const inventoryApi = {
     },
 
     // Economy & Rates
-    getExchangeRates: () => api.get('/economy/rates'),
-    getLatestRate: () => api.get('/economy/rates/latest'),
+    getExchangeRates: () => api.get(`/economy/rates?_t=${Date.now()}`),
+    getLatestRate: () => api.get(`/economy/rates/latest?_t=${Date.now()}`),
     syncExchangeRate: () => api.post('/economy/rates/sync'),
 };
 
