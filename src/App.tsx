@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard,
@@ -92,6 +92,45 @@ export default function App() {
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [showLanding, setShowLanding] = useState(true);
     const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+    const activeModuleRef = useRef<ModuleId>(activeModule);
+
+    useEffect(() => {
+        activeModuleRef.current = activeModule;
+    }, [activeModule]);
+
+    const navigateToModule = useCallback((targetModule: ModuleId) => {
+        const currentModule = activeModuleRef.current;
+        if (targetModule === currentModule) return;
+
+        if (targetModule === 'menu') {
+            setSelectedEventId(null);
+            setActiveModule('menu');
+            window.history.replaceState({ module: 'menu' }, '', window.location.pathname);
+        } else {
+            setActiveModule(targetModule);
+            if (currentModule === 'menu') {
+                window.history.pushState({ module: targetModule }, '', window.location.pathname);
+            } else {
+                window.history.replaceState({ module: targetModule }, '', window.location.pathname);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        window.history.replaceState({ module: 'menu', root: true }, '', window.location.pathname);
+        window.history.pushState({ module: activeModuleRef.current }, '', window.location.pathname);
+
+        const handlePopState = () => {
+            setSelectedEventId(null);
+            setActiveModule('menu');
+            window.history.pushState({ module: 'menu' }, '', window.location.pathname);
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [isAuthenticated]);
 
     useEffect(() => {
         const checkScreenSize = () => {
@@ -152,7 +191,7 @@ export default function App() {
                 <ServicesCalendar
                     onEventClick={(id) => {
                         setSelectedEventId(id);
-                        setActiveModule('catering');
+                        navigateToModule('catering');
                     }}
                 />
             );
@@ -207,7 +246,7 @@ export default function App() {
                     <main className="animate-in fade-in duration-500">
                         <DashboardGrid
                             modules={allowedModules}
-                            onNavigate={(id) => setActiveModule(id as ModuleId)}
+                            onNavigate={(id) => navigateToModule(id as ModuleId)}
                             user={user}
                         />
                     </main>
@@ -250,7 +289,7 @@ export default function App() {
 
                     <div className="px-4 mb-4">
                         <button
-                            onClick={() => setActiveModule('menu')}
+                            onClick={() => navigateToModule('menu')}
                             className="w-full flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-700/50 text-gray-500 rounded-xl hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200"
                         >
                             <LayoutDashboard size={18} className="flex-shrink-0" />
@@ -265,7 +304,7 @@ export default function App() {
                             return (
                                 <button
                                     key={mod.id}
-                                    onClick={() => setActiveModule(mod.id as ModuleId)}
+                                    onClick={() => navigateToModule(mod.id as ModuleId)}
                                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group ${isActive
                                         ? 'bg-primary/10 text-primary'
                                         : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'

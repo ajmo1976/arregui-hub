@@ -1223,11 +1223,18 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
         }
     }, [initialSelectedEventId, events, onClearRoute]);
 
+    const normalizeSearchText = (text?: string | null): string =>
+        (text ?? '')
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+
     const passDetailFilters = (d: any) => {
         if (filterDate && getNeutralDateString(d.service_date) !== filterDate) {
             return false;
         }
-        if (filterLocation && !d.location?.toLowerCase().includes(filterLocation.toLowerCase())) {
+        if (filterLocation && !normalizeSearchText(d.location).includes(normalizeSearchText(filterLocation))) {
             return false;
         }
         return true;
@@ -1240,16 +1247,16 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
 
             // 1. Buscador global (si está escrito)
             if (searchTerm) {
-                const term = searchTerm.toLowerCase();
+                const term = normalizeSearchText(searchTerm);
                 const matchesGlobal = 
                     ev.id.toString().includes(term) ||
-                    ev.title.toLowerCase().includes(term) ||
-                    ev.responsible.toLowerCase().includes(term) ||
-                    (ev.cost_center || '').toLowerCase().includes(term) ||
-                    (ev.company || '').toLowerCase().includes(term) ||
+                    normalizeSearchText(ev.title).includes(term) ||
+                    normalizeSearchText(ev.responsible).includes(term) ||
+                    normalizeSearchText(ev.cost_center).includes(term) ||
+                    normalizeSearchText(ev.company).includes(term) ||
                     (ev.details && ev.details.some((d: any) => 
-                        d.location.toLowerCase().includes(term) ||
-                        formatNeutralDate(d.service_date).toLowerCase().includes(term) ||
+                        normalizeSearchText(d.location).includes(term) ||
+                        normalizeSearchText(formatNeutralDate(d.service_date)).includes(term) ||
                         getNeutralDateString(d.service_date).includes(term)
                     ));
                 if (!matchesGlobal) return false;
@@ -1262,10 +1269,10 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
 
             // 3. Filtro por Servicio / Responsable
             if (filterTitleResp) {
-                const term = filterTitleResp.toLowerCase();
+                const term = normalizeSearchText(filterTitleResp);
                 const matchesTitleResp = 
-                    ev.title.toLowerCase().includes(term) ||
-                    ev.responsible.toLowerCase().includes(term);
+                    normalizeSearchText(ev.title).includes(term) ||
+                    normalizeSearchText(ev.responsible).includes(term);
                 if (!matchesTitleResp) return false;
             }
 
@@ -1279,17 +1286,17 @@ export default function ServicesView({ initialSelectedEventId, onClearRoute }: S
 
             // 5. Filtro por Lugar (location)
             if (filterLocation) {
-                const term = filterLocation.toLowerCase();
+                const term = normalizeSearchText(filterLocation);
                 const matchesLoc = ev.details && ev.details.some((d: any) => 
-                    d.location.toLowerCase().includes(term)
+                    normalizeSearchText(d.location).includes(term)
                 );
                 if (!matchesLoc) return false;
             }
 
             // 6. Filtro por Logística (Centro de Costo)
             if (filterCostCenter) {
-                const term = filterCostCenter.toLowerCase();
-                if (!(ev.cost_center || '').toLowerCase().includes(term)) return false;
+                const term = normalizeSearchText(filterCostCenter);
+                if (!normalizeSearchText(ev.cost_center).includes(term)) return false;
             }
 
             // 7. Filtro por Estado (status)
